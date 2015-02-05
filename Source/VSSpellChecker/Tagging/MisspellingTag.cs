@@ -25,14 +25,12 @@ using System.Collections.Generic;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Tagging;
 
-using VisualStudio.SpellChecker.Definitions;
-
-namespace VisualStudio.SpellChecker
+namespace VisualStudio.SpellChecker.Tagging
 {
     /// <summary>
     /// This class represents a misspelling tag
     /// </summary>
-    internal sealed class MisspellingTag : IMisspellingTag
+    internal sealed class MisspellingTag : ITag
     {
         #region Properties
         //=====================================================================

@@ -2,7 +2,7 @@
 // System  : Visual Studio Spell Checker Package
 // File    : CSharpOptionsUserControl.xaml.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 01/25/2015
+// Updated : 02/02/2015
 // Note    : Copyright 2014-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -19,6 +19,8 @@
 //===============================================================================================================
 
 using System.Windows.Controls;
+
+using VisualStudio.SpellChecker.Configuration;
 
 namespace VisualStudio.SpellChecker.UI
 {
@@ -67,25 +69,37 @@ namespace VisualStudio.SpellChecker.UI
         }
 
         /// <inheritdoc />
-        public void LoadConfiguration()
+        public void LoadConfiguration(SpellingConfigurationFile configuration)
         {
-            chkIgnoreXmlDocComments.IsChecked = SpellCheckerConfiguration.IgnoreXmlDocComments;
-            chkIgnoreDelimitedComments.IsChecked = SpellCheckerConfiguration.IgnoreDelimitedComments;
-            chkIgnoreStandardSingleLineComments.IsChecked = SpellCheckerConfiguration.IgnoreStandardSingleLineComments;
-            chkIgnoreQuadrupleSlashComments.IsChecked = SpellCheckerConfiguration.IgnoreQuadrupleSlashComments;
-            chkIgnoreNormalStrings.IsChecked = SpellCheckerConfiguration.IgnoreNormalStrings;
-            chkIgnoreVerbatimStrings.IsChecked = SpellCheckerConfiguration.IgnoreVerbatimStrings;
+            chkIgnoreXmlDocComments.IsChecked = configuration.ToBoolean(
+                PropertyNames.CSharpOptionsIgnoreXmlDocComments);
+            chkIgnoreDelimitedComments.IsChecked = configuration.ToBoolean(
+                PropertyNames.CSharpOptionsIgnoreDelimitedComments);
+            chkIgnoreStandardSingleLineComments.IsChecked = configuration.ToBoolean(
+                PropertyNames.CSharpOptionsIgnoreStandardSingleLineComments);
+            chkIgnoreQuadrupleSlashComments.IsChecked = configuration.ToBoolean(
+                PropertyNames.CSharpOptionsIgnoreQuadrupleSlashComments);
+            chkIgnoreNormalStrings.IsChecked = configuration.ToBoolean(
+                PropertyNames.CSharpOptionsIgnoreNormalStrings);
+            chkIgnoreVerbatimStrings.IsChecked = configuration.ToBoolean(
+                PropertyNames.CSharpOptionsIgnoreVerbatimStrings);
         }
 
         /// <inheritdoc />
-        public bool SaveConfiguration()
+        public bool SaveConfiguration(SpellingConfigurationFile configuration)
         {
-            SpellCheckerConfiguration.IgnoreXmlDocComments = chkIgnoreXmlDocComments.IsChecked.Value;
-            SpellCheckerConfiguration.IgnoreDelimitedComments = chkIgnoreDelimitedComments.IsChecked.Value;
-            SpellCheckerConfiguration.IgnoreStandardSingleLineComments = chkIgnoreStandardSingleLineComments.IsChecked.Value;
-            SpellCheckerConfiguration.IgnoreQuadrupleSlashComments = chkIgnoreQuadrupleSlashComments.IsChecked.Value;
-            SpellCheckerConfiguration.IgnoreNormalStrings = chkIgnoreNormalStrings.IsChecked.Value;
-            SpellCheckerConfiguration.IgnoreVerbatimStrings = chkIgnoreVerbatimStrings.IsChecked.Value;
+            configuration.StoreProperty(PropertyNames.CSharpOptionsIgnoreXmlDocComments,
+                chkIgnoreXmlDocComments.IsChecked.Value);
+            configuration.StoreProperty(PropertyNames.CSharpOptionsIgnoreDelimitedComments,
+                chkIgnoreDelimitedComments.IsChecked.Value);
+            configuration.StoreProperty(PropertyNames.CSharpOptionsIgnoreStandardSingleLineComments,
+                chkIgnoreStandardSingleLineComments.IsChecked.Value);
+            configuration.StoreProperty(PropertyNames.CSharpOptionsIgnoreQuadrupleSlashComments,
+                chkIgnoreQuadrupleSlashComments.IsChecked.Value);
+            configuration.StoreProperty(PropertyNames.CSharpOptionsIgnoreNormalStrings,
+                chkIgnoreNormalStrings.IsChecked.Value);
+            configuration.StoreProperty(PropertyNames.CSharpOptionsIgnoreVerbatimStrings,
+                chkIgnoreVerbatimStrings.IsChecked.Value);
 
             return true;
         }

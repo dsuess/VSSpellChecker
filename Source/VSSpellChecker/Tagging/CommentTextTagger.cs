@@ -2,9 +2,9 @@
 // System  : Visual Studio Spell Checker Package
 // File    : CommentTextTagger.cs
 // Authors : Noah Richards, Roman Golovin, Michael Lehenbauer, Eric Woodruff
-// Updated : 01/30/2015
+// Updated : 02/04/2015
 // Note    : Copyright 2010-2015, Microsoft Corporation, All rights reserved
-//           Portions Copyright 2013-2014, Eric Woodruff, All rights reserved
+//           Portions Copyright 2013-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
 // This file contains a class used to provide tags for source code files of any type
@@ -37,9 +37,11 @@ using Microsoft.VisualStudio.Text.Tagging;
 using Microsoft.VisualStudio.Utilities;
 
 using VisualStudio.SpellChecker;
-using VisualStudio.SpellChecker.NaturalTextTaggers.CSharp;
+using VisualStudio.SpellChecker.Configuration;
+using VisualStudio.SpellChecker.Tagging.CSharp;
+using VisualStudio.SpellChecker.Tagging;
 
-namespace VisualStudio.SpellChecker.NaturalTextTaggers
+namespace VisualStudio.SpellChecker.Tagging
 {
     /// <summary>
     /// This class provides tags for source code files of any type
@@ -63,13 +65,11 @@ namespace VisualStudio.SpellChecker.NaturalTextTaggers
         [Export(typeof(ITaggerProvider)), ContentType("code"), TagType(typeof(NaturalTextTag))]
         internal class CommentTextTaggerProvider : ITaggerProvider
         {
-            /// <summary>
-            /// This is used to get or set the classifier aggregator service
-            /// </summary>
-            /// <remarks>The Import attribute causes the composition container to assign a value to this when an
-            /// instance is created.  It is not assigned to within this class.</remarks>
             [Import]
-            internal IClassifierAggregatorService ClassifierAggregatorService { get; set; }
+            private IClassifierAggregatorService classifierAggregatorService = null;
+
+            [Import]
+            private SpellingServiceFactory spellingService = null;
 
             /// <summary>
             /// Creates a tag provider for the specified buffer
@@ -80,8 +80,13 @@ namespace VisualStudio.SpellChecker.NaturalTextTaggers
             /// checking as you type is disabled.</returns>
             public ITagger<T> CreateTagger<T>(ITextBuffer buffer) where T : ITag
             {
-                if(buffer == null || !SpellCheckerConfiguration.SpellCheckAsYouType ||
-                  SpellCheckerConfiguration.IsExcludedByExtension(buffer.GetFilenameExtension()))
+                if(buffer == null || spellingService == null)
+                    return null;
+
+                // Getting the configuration determines if spell checking is enabled for this file
+                var config = spellingService.GetConfiguration(buffer);
+
+                if(config == null)
                     return null;
 
                 // Due to an issue with the built-in C# classifier, we avoid using it.  This also lets us provide
@@ -93,24 +98,25 @@ namespace VisualStudio.SpellChecker.NaturalTextTaggers
                     // closed and reopened for the changes to take effect.
                     return new CSharpCommentTextTagger(buffer)
                     {
-                        IgnoreXmlDocComments = SpellCheckerConfiguration.IgnoreXmlDocComments,
-                        IgnoreDelimitedComments = SpellCheckerConfiguration.IgnoreDelimitedComments,
-                        IgnoreStandardSingleLineComments = SpellCheckerConfiguration.IgnoreStandardSingleLineComments,
-                        IgnoreQuadrupleSlashComments = SpellCheckerConfiguration.IgnoreQuadrupleSlashComments,
-                        IgnoreNormalStrings = SpellCheckerConfiguration.IgnoreNormalStrings,
-                        IgnoreVerbatimStrings = SpellCheckerConfiguration.IgnoreVerbatimStrings
+                        IgnoreXmlDocComments = config.CSharpOptions.IgnoreXmlDocComments,
+                        IgnoreDelimitedComments = config.CSharpOptions.IgnoreDelimitedComments,
+                        IgnoreStandardSingleLineComments = config.CSharpOptions.IgnoreStandardSingleLineComments,
+                        IgnoreQuadrupleSlashComments = config.CSharpOptions.IgnoreQuadrupleSlashComments,
+                        IgnoreNormalStrings = config.CSharpOptions.IgnoreNormalStrings,
+                        IgnoreVerbatimStrings = config.CSharpOptions.IgnoreVerbatimStrings
 
                     } as ITagger<T>;
                 }
 
-                var tagger = new CommentTextTagger(buffer, ClassifierAggregatorService.GetClassifier(buffer));
+                var tagger = new CommentTextTagger(buffer, classifierAggregatorService.GetClassifier(buffer));
 
+                // TODO: These should be accessed through the configuration or just grab a copy of the underlying hash set
                 // Add the XML elements in which to ignore content and the XML attributes that will have their
                 // content spell checked.
-                foreach(string element in SpellCheckerConfiguration.IgnoredXmlElements)
+                foreach(string element in config.IgnoredXmlElements)
                     tagger.IgnoredElementNames.Add(element);
 
-                foreach(string attr in SpellCheckerConfiguration.SpellCheckedXmlAttributes)
+                foreach(string attr in config.SpellCheckedXmlAttributes)
                     tagger.SpellCheckAttributeNames.Add(attr);
 
                 return tagger as ITagger<T>;
@@ -159,7 +165,7 @@ namespace VisualStudio.SpellChecker.NaturalTextTaggers
         }
         #endregion
 
-        #region ITagger<INaturalTextTag> Members
+        #region ITagger<NaturalTextTag> Members
         //=====================================================================
 
         /// <inheritdoc />

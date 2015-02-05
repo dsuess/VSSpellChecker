@@ -2,8 +2,8 @@
 // System  : Visual Studio Spell Checker Package
 // File    : ISpellCheckerConfiguration.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 06/12/2014
-// Note    : Copyright 2014, Eric Woodruff, All rights reserved
+// Updated : 02/02/2015
+// Note    : Copyright 2014-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
 // This file contains an interface used by the configuration user controls
@@ -19,6 +19,8 @@
 //===============================================================================================================
 
 using System.Windows.Controls;
+
+using VisualStudio.SpellChecker.Configuration;
 
 namespace VisualStudio.SpellChecker.UI
 {
@@ -51,12 +53,13 @@ namespace VisualStudio.SpellChecker.UI
         /// <summary>
         /// Load the configuration settings for the control
         /// </summary>
-        void LoadConfiguration();
+        /// <param name="configuration">The configuration file from which to load settings</param>
+        void LoadConfiguration(SpellingConfigurationFile configuration);
 
         /// <summary>
-        /// Save the configuration settings for the control
+        /// Save the configuration settings for the control to the given configuration file
         /// </summary>
         /// <returns>True if saved successfully, false if not</returns>
-        bool SaveConfiguration();
+        bool SaveConfiguration(SpellingConfigurationFile configuration);
     }
 }

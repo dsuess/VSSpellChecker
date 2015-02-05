@@ -2,7 +2,7 @@
 // System  : Visual Studio Spell Checker Package
 // File    : VSSpellCheckerPackage.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 01/27/2015
+// Updated : 02/02/2015
 // Note    : Copyright 2013-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -22,11 +22,13 @@ using System;
 using System.ComponentModel.Design;
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 using System.Runtime.InteropServices;
 
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 
+using VisualStudio.SpellChecker.Configuration;
 using VisualStudio.SpellChecker.UI;
 
 namespace VisualStudio.SpellChecker
@@ -138,8 +140,23 @@ namespace VisualStudio.SpellChecker
         /// <param name="e">The event arguments</param>
         private void SpellCheckerConfigurationExecuteHandler(object sender, EventArgs e)
         {
-            var dlg = new SpellCheckerConfigDlg();
-            dlg.ShowDialog();
+            string configFile = SpellingConfigurationFile.GlobalConfigurationFilename;
+
+            if(!File.Exists(configFile))
+            {
+                // See if the legacy configuration file exists.  If so, load it and convert it.
+                string legacyConfigFile = Path.Combine(SpellingConfigurationFile.GlobalConfigurationFilePath,
+                    "SpellChecker.config");
+
+                // If not found, we'll use the defaults
+                if(File.Exists(legacyConfigFile))
+                    configFile = legacyConfigFile;
+            }
+
+            var dlg = new SpellCheckerConfigDlg(configFile);
+
+            if(dlg.ShowDialog().GetValueOrDefault(false))
+                SpellCheckerConfiguration.GlobalConfiguration.Load(SpellingConfigurationFile.GlobalConfigurationFilename);
         }
 
         /// <summary>

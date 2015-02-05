@@ -1,5 +1,5 @@
-﻿//===============================================================================================================
-// System  : Visual Studio Spell Checker Definitions
+//===============================================================================================================
+// System  : Visual Studio Spell Checker Package
 // File    : SpellingEventArgs.cs
 // Authors : Noah Richards, Roman Golovin, Michael Lehenbauer
 // Updated : 05/31/2013
@@ -23,7 +23,7 @@
 using System;
 using Microsoft.VisualStudio.Text;
 
-namespace VisualStudio.SpellChecker.Definitions
+namespace VisualStudio.SpellChecker
 {
     /// <summary>
     /// This class contain arguments for spelling events

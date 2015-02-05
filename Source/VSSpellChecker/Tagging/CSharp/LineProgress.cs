@@ -26,7 +26,7 @@ using System.Diagnostics;
 
 using Microsoft.VisualStudio.Text;
 
-namespace VisualStudio.SpellChecker.NaturalTextTaggers.CSharp
+namespace VisualStudio.SpellChecker.Tagging.CSharp
 {
     /// <summary>
     /// This class is used to track line progress while parsing C# code for natural text regions

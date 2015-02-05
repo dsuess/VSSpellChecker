@@ -1,12 +1,12 @@
-//===============================================================================================================
-// System  : Visual Studio Spell Checker Definitions
-// File    : INaturalTextTag.cs
+﻿//===============================================================================================================
+// System  : Visual Studio Spell Checker Package
+// File    : SpellSquiggleTag.cs
 // Authors : Noah Richards, Roman Golovin, Michael Lehenbauer
-// Updated : 04/14/2013
-// Note    : Copyright 2010-2013, Microsoft Corporation, All rights reserved
+// Updated : 02/03/2015
+// Note    : Copyright 2010-2015, Microsoft Corporation, All rights reserved
 // Compiler: Microsoft Visual C#
 //
-// This file contains an interface used to represent a tag for natural text regions
+// This file contains a class that represents a natural text region tag
 //
 // This code is published under the Microsoft Public License (Ms-PL).  A copy of the license should be
 // distributed with the code and can be found at the project website: https://github.com/EWSoftware/VSSpellChecker
@@ -20,12 +20,12 @@
 
 using Microsoft.VisualStudio.Text.Tagging;
 
-namespace VisualStudio.SpellChecker.Definitions
+namespace VisualStudio.SpellChecker.Tagging
 {
     /// <summary>
-    /// This represents a tag for natural text regions
+    /// This class represents a natural text region tag
     /// </summary>
-    public interface INaturalTextTag : ITag
+    internal sealed class NaturalTextTag : ITag
     {
     }
 }

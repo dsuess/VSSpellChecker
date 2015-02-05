@@ -2,7 +2,7 @@
 // System  : Visual Studio Spell Checker Package
 // File    : SpellCheckerConfigDlg.xaml.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 01/25/2015
+// Updated : 02/01/2015
 // Note    : Copyright 2013-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -17,6 +17,7 @@
 // ==============================================================================================================
 // 04/14/2013  EFW  Created the code
 // 06/09/2014  EFW  Reworked to use a tree view and user controls for the various configuration categories
+// 02/01/2015  EFW  Refactored the configuration settings to allow for solution and project specific settings
 //===============================================================================================================
 
 using System;
@@ -28,6 +29,8 @@ using System.Windows.Controls;
 
 using PackageResources = VisualStudio.SpellChecker.Properties.Resources;
 
+using VisualStudio.SpellChecker.Configuration;
+
 namespace VisualStudio.SpellChecker.UI
 {
     /// <summary>
@@ -37,16 +40,25 @@ namespace VisualStudio.SpellChecker.UI
     /// by all versions of Visual Studio in which the package is installed.</remarks>
     public partial class SpellCheckerConfigDlg : Window
     {
+        #region Private data members
+        //=====================================================================
+
+        private SpellingConfigurationFile configFile;
+        #endregion
+
         #region Constructor
         //=====================================================================
 
         /// <summary>
         /// Constructor
         /// </summary>
-        public SpellCheckerConfigDlg()
+        /// <param name="configurationFile">The configuration file to edit</param>
+        public SpellCheckerConfigDlg(string configurationFile)
         {
             ISpellCheckerConfiguration page;
             TreeViewItem node;
+
+            configFile = new SpellingConfigurationFile(configurationFile, null);
 
             InitializeComponent();
 
@@ -79,7 +91,7 @@ namespace VisualStudio.SpellChecker.UI
                 }
 
                 foreach(TreeViewItem item in tvPages.Items)
-                    ((ISpellCheckerConfiguration)item.Tag).LoadConfiguration();
+                    ((ISpellCheckerConfiguration)item.Tag).LoadConfiguration(configFile);
             }
             finally
             {
@@ -161,17 +173,18 @@ namespace VisualStudio.SpellChecker.UI
             {
                 ISpellCheckerConfiguration page = (ISpellCheckerConfiguration)item.Tag;
 
-                if(!page.SaveConfiguration())
+                if(!page.SaveConfiguration(configFile))
                 {
                     item.IsSelected = true;
                     return;
                 }
             }
 
-            if(!SpellCheckerConfiguration.SaveConfiguration())
+            if(!configFile.Save())
                 MessageBox.Show("Unable to save spell checking configuration", PackageResources.PackageTitle,
                     MessageBoxButton.OK, MessageBoxImage.Exclamation);
 
+            this.DialogResult = true;
             this.Close();
         }
 
@@ -186,10 +199,10 @@ namespace VisualStudio.SpellChecker.UI
               "(excluding the user dictionary)?", PackageResources.PackageTitle, MessageBoxButton.YesNo,
               MessageBoxImage.Question, MessageBoxResult.No) == MessageBoxResult.Yes)
             {
-                SpellCheckerConfiguration.ResetConfiguration(true);
+                var newConfigFile = new SpellingConfigurationFile("NewTemp", new SpellCheckerConfiguration());
 
                 foreach(TreeViewItem item in tvPages.Items)
-                    ((ISpellCheckerConfiguration)item.Tag).LoadConfiguration();
+                    ((ISpellCheckerConfiguration)item.Tag).LoadConfiguration(newConfigFile);
             }
         }
 

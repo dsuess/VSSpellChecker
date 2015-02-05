@@ -20,7 +20,7 @@
 // 06/12/2014  EFW  Added support for MultiLineDocComment
 //===============================================================================================================
 
-namespace VisualStudio.SpellChecker.NaturalTextTaggers.CSharp
+namespace VisualStudio.SpellChecker.Tagging.CSharp
 {
     /// <summary>
     /// This enumerated type is used to indicate the line progress state

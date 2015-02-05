@@ -2,7 +2,7 @@
 // System  : Visual Studio Spell Checker Package
 // File    : UserDictionaryUserControl.xaml.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 01/25/2015
+// Updated : 02/02/2015
 // Note    : Copyright 2014-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -29,6 +29,8 @@ using System.Windows.Controls;
 using Microsoft.Win32;
 
 using PackageResources = VisualStudio.SpellChecker.Properties.Resources;
+
+using VisualStudio.SpellChecker.Configuration;
 
 namespace VisualStudio.SpellChecker.UI
 {
@@ -78,12 +80,14 @@ namespace VisualStudio.SpellChecker.UI
         }
 
         /// <inheritdoc />
-        public void LoadConfiguration()
+        public void LoadConfiguration(SpellingConfigurationFile configuration)
         {
-            if(cboDefaultLanguage.Items.Contains(SpellCheckerConfiguration.DefaultLanguage))
-                cboDefaultLanguage.SelectedItem = SpellCheckerConfiguration.DefaultLanguage;
+            var defaultLang = configuration.ToCultureInfo(PropertyNames.DefaultLanguage);
 
-            switch(SpellCheckerConfiguration.IgnoreCharacterClass)
+            if(cboDefaultLanguage.Items.Contains(defaultLang))
+                cboDefaultLanguage.SelectedItem = defaultLang;
+
+            switch(configuration.ToEnum<IgnoredCharacterClass>(PropertyNames.IgnoreCharacterClass))
             {
                 case IgnoredCharacterClass.NonAscii:
                     rbIgnoreNonAscii.IsChecked = true;
@@ -100,13 +104,14 @@ namespace VisualStudio.SpellChecker.UI
         }
 
         /// <inheritdoc />
-        public bool SaveConfiguration()
+        public bool SaveConfiguration(SpellingConfigurationFile configuration)
         {
-            SpellCheckerConfiguration.DefaultLanguage = (CultureInfo)cboDefaultLanguage.SelectedItem;
+            configuration.StoreProperty(PropertyNames.DefaultLanguage,
+                ((CultureInfo)cboDefaultLanguage.SelectedItem).Name);
 
-            SpellCheckerConfiguration.IgnoreCharacterClass =
-                rbIncludeAll.IsChecked.Value ? IgnoredCharacterClass.None :
-                    rbIgnoreNonLatin.IsChecked.Value ? IgnoredCharacterClass.NonLatin : IgnoredCharacterClass.NonAscii;
+            configuration.StoreProperty(PropertyNames.IgnoreCharacterClass,
+                rbIncludeAll.IsChecked.Value ? IgnoredCharacterClass.None : rbIgnoreNonLatin.IsChecked.Value ?
+                    IgnoredCharacterClass.NonLatin : IgnoredCharacterClass.NonAscii);
 
             return true;
         }
@@ -122,7 +127,7 @@ namespace VisualStudio.SpellChecker.UI
         /// <param name="e">The event arguments</param>
         private void cboDefaultLanguage_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            string filename = Path.Combine(SpellCheckerConfiguration.ConfigurationFilePath,
+            string filename = Path.Combine(SpellingConfigurationFile.GlobalConfigurationFilePath,
                 ((CultureInfo)cboDefaultLanguage.SelectedItem).Name + "_User.dic");
 
             lbUserDictionary.Items.Clear();
@@ -173,7 +178,7 @@ namespace VisualStudio.SpellChecker.UI
             }
 
             CultureInfo culture = (CultureInfo)cboDefaultLanguage.SelectedItem;
-            string filename = Path.Combine(SpellCheckerConfiguration.ConfigurationFilePath,
+            string filename = Path.Combine(SpellingConfigurationFile.GlobalConfigurationFilePath,
                 culture.Name + "_User.dic");
 
             try
@@ -222,7 +227,7 @@ namespace VisualStudio.SpellChecker.UI
                                 new[] { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' }) == -1).ToList();
 
                     CultureInfo culture = (CultureInfo)cboDefaultLanguage.SelectedItem;
-                    string filename = Path.Combine(SpellCheckerConfiguration.ConfigurationFilePath,
+                    string filename = Path.Combine(SpellingConfigurationFile.GlobalConfigurationFilePath,
                         culture.Name + "_User.dic");
 
                     try

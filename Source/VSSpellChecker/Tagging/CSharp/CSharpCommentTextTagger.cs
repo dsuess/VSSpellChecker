@@ -4,7 +4,7 @@
 // Authors : Noah Richards, Roman Golovin, Michael Lehenbauer, Eric Woodruff
 // Updated : 01/30/2015
 // Note    : Copyright 2010-2015, Microsoft Corporation, All rights reserved
-//           Portions Copyright 2013-2014, Eric Woodruff, All rights reserved
+//           Portions Copyright 2013-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
 // This file contains a class used to provide tags for C# code
@@ -29,7 +29,9 @@ using System.Linq;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Tagging;
 
-namespace VisualStudio.SpellChecker.NaturalTextTaggers.CSharp
+using VisualStudio.SpellChecker.Tagging;
+
+namespace VisualStudio.SpellChecker.Tagging.CSharp
 {
     /// <summary>
     /// This class is used to provide tags for C# code
@@ -127,7 +129,7 @@ namespace VisualStudio.SpellChecker.NaturalTextTaggers.CSharp
         }
         #endregion
 
-        #region ITagger<INaturalTextTag> Members
+        #region ITagger<NaturalTextTag> Members
         //=====================================================================
 
         /// <inheritdoc />

@@ -2,9 +2,9 @@
 // System  : Visual Studio Spell Checker Package
 // File    : HtmlTextTagger.cs
 // Authors : Noah Richards, Roman Golovin, Michael Lehenbauer, Eric Woodruff
-// Updated : 01/30/2015
+// Updated : 02/04/2015
 // Note    : Copyright 2010-2015, Microsoft Corporation, All rights reserved
-//           Portions Copyright 2013-2014, Eric Woodruff, All rights reserved
+//           Portions Copyright 2013-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
 // This file contains a class used to provide tags for HTML files
@@ -33,8 +33,10 @@ using Microsoft.VisualStudio.Text.Tagging;
 using Microsoft.VisualStudio.Utilities;
 
 using VisualStudio.SpellChecker;
+using VisualStudio.SpellChecker.Configuration;
+using VisualStudio.SpellChecker.Tagging;
 
-namespace VisualStudio.SpellChecker.NaturalTextTaggers
+namespace VisualStudio.SpellChecker.Tagging
 {
     /// <summary>
     /// This class provides tags for HTML files
@@ -58,13 +60,11 @@ namespace VisualStudio.SpellChecker.NaturalTextTaggers
         [Export(typeof(ITaggerProvider)), ContentType("html"), ContentType("htmlx"), TagType(typeof(NaturalTextTag))]
         internal class HtmlTextTaggerProvider : ITaggerProvider
         {
-            /// <summary>
-            /// This is used to get or set the classifier aggregator service
-            /// </summary>
-            /// <remarks>The Import attribute causes the composition container to assign a value to this when an
-            /// instance is created.  It is not assigned to within this class.</remarks>
             [Import]
-            IClassifierAggregatorService ClassifierAggregatorService { get; set; }
+            private IClassifierAggregatorService classifierAggregatorService { get; set; }
+
+            [Import]
+            private SpellingServiceFactory spellingService = null;
 
             /// <summary>
             /// Creates a tag provider for the specified buffer
@@ -75,11 +75,16 @@ namespace VisualStudio.SpellChecker.NaturalTextTaggers
             /// checking as you type is disabled.</returns>
             public ITagger<T> CreateTagger<T>(ITextBuffer buffer) where T : ITag
             {
-                if(buffer == null || !SpellCheckerConfiguration.SpellCheckAsYouType ||
-                  SpellCheckerConfiguration.IsExcludedByExtension(buffer.GetFilenameExtension()))
+                if(buffer == null || spellingService == null)
                     return null;
 
-                return new HtmlTextTagger(ClassifierAggregatorService.GetClassifier(buffer)) as ITagger<T>;
+                // Getting the configuration determines if spell checking is enabled for this file
+                var config = spellingService.GetConfiguration(buffer);
+
+                if(config == null)
+                    return null;
+
+                return new HtmlTextTagger(classifierAggregatorService.GetClassifier(buffer)) as ITagger<T>;
             }
         }
         #endregion
@@ -97,7 +102,7 @@ namespace VisualStudio.SpellChecker.NaturalTextTaggers
         }
         #endregion
 
-        #region ITagger<INaturalTextTag> Members
+        #region ITagger<NaturalTextTag> Members
         //=====================================================================
 
         /// <inheritdoc />

@@ -1,7 +1,7 @@
 ﻿<Window x:Class="VisualStudio.SpellChecker.UI.SpellCheckerConfigDlg"
 			xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 			xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-			Title="Spell Checker Configuration" Height="420" Width="750"
+			Title="Spell Checker Configuration" Height="450" Width="800"
 			WindowStartupLocation="CenterScreen" ResizeMode="NoResize"
 			Icon="/VisualStudio.SpellChecker;component/Resources/Package.ico">
 	<Grid>

@@ -1,10 +1,10 @@
 //===============================================================================================================
 // System  : Visual Studio Spell Checker Package
-// File    : SpellingDictionaryService.cs
+// File    : SpellingDictionary.cs
 // Authors : Noah Richards, Roman Golovin, Michael Lehenbauer, Eric Woodruff
-// Updated : 01/31/2015
+// Updated : 02/04/2015
 // Note    : Copyright 2010-2015, Microsoft Corporation, All rights reserved
-//           Portions Copyright 2013-2014, Eric Woodruff, All rights reserved
+//           Portions Copyright 2013-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
 // This file contains a class that implements the spelling dictionary service
@@ -23,11 +23,10 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 using Microsoft.VisualStudio.Text;
 
-using VisualStudio.SpellChecker.Definitions;
+using VisualStudio.SpellChecker.Configuration;
 
 namespace VisualStudio.SpellChecker
 {
@@ -35,12 +34,11 @@ namespace VisualStudio.SpellChecker
     /// This class implements the spelling dictionary service.  The spelling dictionary utilizes NHunspell to
     /// perform the spell checking.
     /// </summary>
-    internal sealed class SpellingDictionaryService : ISpellingDictionary
+    internal sealed class SpellingDictionary
     {
         #region Private data members
         //=====================================================================
 
-        private IList<ISpellingDictionary> bufferSpecificDictionaries;
         private GlobalDictionary globalDictionary;
         #endregion
 
@@ -52,18 +50,9 @@ namespace VisualStudio.SpellChecker
         /// </summary>
         /// <param name="bufferSpecificDictionaries">A list of buffer-specific dictionaries</param>
         /// <param name="globalDictionary">The global dictionary</param>
-        public SpellingDictionaryService(IList<ISpellingDictionary> bufferSpecificDictionaries,
-          GlobalDictionary globalDictionary)
+        public SpellingDictionary(GlobalDictionary globalDictionary)
         {
             this.globalDictionary = globalDictionary;
-            this.bufferSpecificDictionaries = bufferSpecificDictionaries;
-
-            // TODO: This never gets disconnected and would probably keep this instance alive, right?  Probably
-            // should switch to something like RegisterSpellingDictionaryService used by global dictionary.
-            // Perhaps make that method part of the ISpellingDictionary interface?  Need to test it once a
-            // buffer-specific class is actually implemented.
-            foreach(var dictionary in bufferSpecificDictionaries)
-                dictionary.DictionaryUpdated += this.BufferSpecificDictionaryUpdated;
 
             // Register to receive events when the global dictionary is updated
             globalDictionary.RegisterSpellingDictionaryService(this);
@@ -73,49 +62,50 @@ namespace VisualStudio.SpellChecker
         #region ISpellingDictionary Members
         //=====================================================================
 
-        /// <inheritdoc />
+        /// <summary>
+        /// This is used to spell check a word
+        /// </summary>
+        /// <param name="word">The word to spell check</param>
+        /// <returns>True if spelled correctly, false if not</returns>
         public bool IsSpelledCorrectly(string word)
         {
-            foreach(var dictionary in bufferSpecificDictionaries)
-            {
-                if(dictionary.IsSpelledCorrectly(word))
-                    return true;
-            }
-
             return globalDictionary.IsSpelledCorrectly(word);
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        /// This is used to suggest corrections for a misspelled word
+        /// </summary>
+        /// <param name="word">The misspelled word for which to get suggestions</param>
+        /// <returns>An enumerable list of zero or more suggested correct spellings</returns>
         public IEnumerable<string> SuggestCorrections(string word)
         {
-            foreach(var dictionary in bufferSpecificDictionaries)
-            {
-                var suggestions = dictionary.SuggestCorrections(word);
-
-                if(suggestions.Count() != 0)
-                    return suggestions;
-            }
-
             return globalDictionary.SuggestCorrections(word);
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        /// Add the given word to the dictionary so that it will no longer show up as an incorrect spelling
+        /// </summary>
+        /// <param name="word">The word to add to the dictionary.</param>
+        /// <returns><c>true</c> if the word was successfully added to the dictionary, even if it was already in
+        /// the dictionary.</returns>
         public bool AddWordToDictionary(string word)
         {
             if(String.IsNullOrWhiteSpace(word))
                 return false;
 
-            foreach(var dictionary in bufferSpecificDictionaries)
-                if(dictionary.AddWordToDictionary(word))
-                    return true;
-
-            return globalDictionary.AddWordToDictionary(word);
+            return (this.ShouldIgnoreWord(word) || globalDictionary.AddWordToDictionary(word));
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        /// Raised when a request is made to ignore a word once
+        /// </summary>
+        /// <remarks>The event arguments contains the word that should be ignored once</remarks>
         public event EventHandler<SpellingEventArgs> IgnoreOnce;
 
-        /// <inheritdoc />
+        /// <summary>
+        /// Ignore the given word once, but don't add it to the dictionary
+        /// </summary>
+        /// <param name="span">The tracking span used to locate the word to ignore once</param>
         public void IgnoreWordOnce(ITrackingSpan span)
         {
             var handler = IgnoreOnce;
@@ -124,30 +114,39 @@ namespace VisualStudio.SpellChecker
                 handler(this, new SpellingEventArgs(span));
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        /// Ignore all occurrences of the given word, but don't add it to the dictionary
+        /// </summary>
+        /// <param name="word">The word to be ignored</param>
+        /// <returns><c>true</c> if the word was successfully marked as ignored</returns>
         public bool IgnoreWord(string word)
         {
-            if(String.IsNullOrWhiteSpace(word) || this.ShouldIgnoreWord(word))
+            if(String.IsNullOrWhiteSpace(word))
                 return false;
 
-            foreach(var dictionary in bufferSpecificDictionaries)
-                if(dictionary.IgnoreWord(word))
-                    return true;
-
-            return globalDictionary.IgnoreWord(word);
+            return (this.ShouldIgnoreWord(word) || globalDictionary.IgnoreWord(word));
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        /// Check the ignored words dictionary for the given word
+        /// </summary>
+        /// <param name="word">The word for which to check</param>
+        /// <returns>True if the word should be ignored, false if not</returns>
         public bool ShouldIgnoreWord(string word)
         {
-            foreach(var dictionary in bufferSpecificDictionaries)
-                if(dictionary.ShouldIgnoreWord(word))
-                    return true;
+            // TODO: Should have a local copy of the configuration ignored words as they may vary by file once
+            // solution/project-specific settings are implemented.
+            if(SpellCheckerConfiguration.GlobalConfiguration.ShouldIgnoreWord(word))
+                return true;
 
             return globalDictionary.ShouldIgnoreWord(word);
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        /// Raised when the dictionary has been changed
+        /// </summary>
+        /// <remarks>When a new word is added to the dictionary, the event arguments contains the word that was
+        /// added.</remarks>
         public event EventHandler<SpellingEventArgs> DictionaryUpdated;
 
         /// <summary>
@@ -162,10 +161,17 @@ namespace VisualStudio.SpellChecker
                 handler(this, new SpellingEventArgs(word));
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        /// Raised when all occurrences of a word should be replaced
+        /// </summary>
+        /// <remarks>The event arguments contains the word that should be replaced along with its replacement</remarks>
         public event EventHandler<SpellingEventArgs> ReplaceAll;
 
-        /// <inheritdoc />
+        /// <summary>
+        /// This is used to replace all occurrences of the specified word
+        /// </summary>
+        /// <param name="word">The word to be replaced</param>
+        /// <param name="replacement">The word to use as the replacement</param>
         public void ReplaceAllOccurrences(string word, string replacement)
         {
             var handler = ReplaceAll;
@@ -177,17 +183,6 @@ namespace VisualStudio.SpellChecker
 
         #region Methods and event handlers
         //=====================================================================
-
-        /// <summary>
-        /// This is used to raise the <see cref="DictionaryUpdated"/> event when a buffer-specific dictionary
-        /// changes.
-        /// </summary>
-        /// <param name="sender">The sender of the event</param>
-        /// <param name="e">The event arguments</param>
-        private void BufferSpecificDictionaryUpdated(object sender, SpellingEventArgs e)
-        {
-            this.OnDictionaryUpdated(e.Word);
-        }
 
         /// <summary>
         /// This is called by the global dictionary to raise the <see cref="DictionaryUpdated"/> event when the

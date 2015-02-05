@@ -2,7 +2,7 @@
 // System  : Visual Studio Spell Checker Package
 // File    : IgnoredWordsUserControl.xaml.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 01/25/2015
+// Updated : 02/02/2015
 // Note    : Copyright 2014-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -19,10 +19,13 @@
 //===============================================================================================================
 
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+
+using VisualStudio.SpellChecker.Configuration;
 
 namespace VisualStudio.SpellChecker.UI
 {
@@ -71,11 +74,17 @@ namespace VisualStudio.SpellChecker.UI
         }
 
         /// <inheritdoc />
-        public void LoadConfiguration()
+        public void LoadConfiguration(SpellingConfigurationFile configuration)
         {
+            IEnumerable<string> words;
             lbIgnoredWords.Items.Clear();
 
-            foreach(string el in SpellCheckerConfiguration.IgnoredWords)
+            if(configuration.HasProperty(PropertyNames.IgnoredWords))
+                words = configuration.ToValues(PropertyNames.IgnoredWords, PropertyNames.IgnoredWordsItem);
+            else
+                words = SpellCheckerConfiguration.DefaultIgnoredWords;
+
+            foreach(string el in words)
                 lbIgnoredWords.Items.Add(el);
 
             var sd = new SortDescription { Direction = ListSortDirection.Ascending };
@@ -84,9 +93,15 @@ namespace VisualStudio.SpellChecker.UI
         }
 
         /// <inheritdoc />
-        public bool SaveConfiguration()
+        public bool SaveConfiguration(SpellingConfigurationFile configuration)
         {
-            SpellCheckerConfiguration.SetIgnoredWords(lbIgnoredWords.Items.OfType<string>());
+            HashSet<string> newList = new HashSet<string>(lbIgnoredWords.Items.OfType<string>()),
+                defaultList = new HashSet<string>(SpellCheckerConfiguration.DefaultIgnoredWords);
+
+            if(defaultList.SetEquals(newList))
+                newList = null;
+
+            configuration.StoreValues(PropertyNames.IgnoredWords, PropertyNames.IgnoredWordsItem, newList);
 
             return true;
         }

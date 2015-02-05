@@ -42,27 +42,32 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="..\SpellCheckerDefinitions\Properties\AssemblyInfoShared.cs">
-      <Link>Properties\AssemblyInfoShared.cs</Link>
+    <Compile Include="Configuration\CSharpOptions.cs" />
+    <Compile Include="Configuration\PropertyNames.cs" />
+    <Compile Include="Configuration\SpellingConfigurationFile.cs" />
+    <Compile Include="GlobalSuppressions.cs" />
+    <Compile Include="Guids.cs">
+    </Compile>
+    <Compile Include="PkgCmdID.cs">
     </Compile>
     <Compile Include="GlobalDictionary.cs" />
-    <Compile Include="Guids.cs" />
     <Compile Include="IgnoredCharacterClass.cs" />
-    <Compile Include="PkgCmdID.cs" />
+    <Compile Include="Configuration\SpellCheckerConfiguration.cs" />
     <Compile Include="SmartTags\DictionaryAction.cs" />
     <Compile Include="SmartTags\DoubledWordSmartTagAction.cs" />
+    <Compile Include="SpellingEventArgs.cs" />
     <Compile Include="ToolWindows\InteractiveSpellCheckControl.xaml.cs">
       <DependentUpon>InteractiveSpellCheckControl.xaml</DependentUpon>
     </Compile>
     <Compile Include="ToolWindows\InteractiveSpellCheckToolWindow.cs" />
-    <Compile Include="MisspellingTag.cs" />
-    <Compile Include="NaturalTextTaggers\CommentTextTagger.cs" />
-    <Compile Include="NaturalTextTaggers\CSharp\CSharpCommentTextTagger.cs" />
-    <Compile Include="NaturalTextTaggers\CSharp\LineProgress.cs" />
-    <Compile Include="NaturalTextTaggers\CSharp\State.cs" />
-    <Compile Include="NaturalTextTaggers\HtmlTextTagger.cs" />
-    <Compile Include="NaturalTextTaggers\NaturalTextTag.cs" />
-    <Compile Include="NaturalTextTaggers\PlainTextTagger.cs" />
+    <Compile Include="Tagging\MisspellingTag.cs" />
+    <Compile Include="Tagging\CommentTextTagger.cs" />
+    <Compile Include="Tagging\CSharp\CSharpCommentTextTagger.cs" />
+    <Compile Include="Tagging\CSharp\LineProgress.cs" />
+    <Compile Include="Tagging\CSharp\State.cs" />
+    <Compile Include="Tagging\HtmlTextTagger.cs" />
+    <Compile Include="Tagging\NaturalTextTag.cs" />
+    <Compile Include="Tagging\PlainTextTagger.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -76,9 +81,8 @@
     <Compile Include="SmartTags\SpellSmartTag.cs" />
     <Compile Include="SmartTags\SpellSmartTagAction.cs" />
     <Compile Include="SmartTags\SpellSmartTagger.cs" />
-    <Compile Include="SpellCheckerConfiguration.cs" />
-    <Compile Include="SpellingDictionaryService.cs" />
-    <Compile Include="SpellingDictionaryServiceFactory.cs" />
+    <Compile Include="SpellingDictionary.cs" />
+    <Compile Include="SpellingServiceFactory.cs" />
     <Compile Include="SpellingTagger.cs" />
     <Compile Include="SpellingTaggerProvider.cs" />
     <Compile Include="Squiggles\SpellSquiggleTag.cs" />
@@ -138,7 +142,7 @@
       <ResourceName>Menus.ctmenu</ResourceName>
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
-      <DependentUpon>VSSpellChecker.tt</DependentUpon>
+      <SubType>Designer</SubType>
     </VSCTCompile>
   </ItemGroup>
   <ItemGroup>
@@ -259,13 +263,6 @@
       <EmbedInteropTypes>False</EmbedInteropTypes>
     </COMReference>
   </ItemGroup>
-  <ItemGroup />
-  <ItemGroup>
-    <ProjectReference Include="..\SpellCheckerDefinitions\SpellCheckerDefinitions.csproj">
-      <Project>{07122622-A8CA-495D-9A15-D980D69F7EF3}</Project>
-      <Name>SpellCheckerDefinitions</Name>
-    </ProjectReference>
-  </ItemGroup>
   <ItemGroup>
     <Page Include="ToolWindows\InteractiveSpellCheckControl.xaml">
       <Generator>MSBuild:Compile</Generator>
@@ -312,7 +309,7 @@ Copy "$(TargetDir)$(TargetName).vsix" "$(SolutionDir)..\Deployment\"
 :Exit
 </PostBuildEvent>
   </PropertyGroup>
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it.
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
   </Target>

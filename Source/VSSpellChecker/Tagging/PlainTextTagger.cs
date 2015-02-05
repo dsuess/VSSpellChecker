@@ -2,9 +2,9 @@
 // System  : Visual Studio Spell Checker Package
 // File    : PlainTextTagger.cs
 // Authors : Noah Richards, Roman Golovin, Michael Lehenbauer, Eric Woodruff
-// Updated : 06/06/2014
-// Note    : Copyright 2010-2014, Microsoft Corporation, All rights reserved
-//           Portions Copyright 2013-2014, Eric Woodruff, All rights reserved
+// Updated : 02/04/2015
+// Note    : Copyright 2010-2015, Microsoft Corporation, All rights reserved
+//           Portions Copyright 2013-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
 // This file contains a class used to provide tags for plain text files
@@ -30,8 +30,10 @@ using Microsoft.VisualStudio.Text.Tagging;
 using Microsoft.VisualStudio.Utilities;
 
 using VisualStudio.SpellChecker;
+using VisualStudio.SpellChecker.Configuration;
+using VisualStudio.SpellChecker.Tagging;
 
-namespace VisualStudio.SpellChecker.NaturalTextTaggers
+namespace VisualStudio.SpellChecker.Tagging
 {
     /// <summary>
     /// This class provides tags for plain text files
@@ -48,6 +50,9 @@ namespace VisualStudio.SpellChecker.NaturalTextTaggers
           TagType(typeof(NaturalTextTag))]
         internal class PlainTextTaggerProvider : ITaggerProvider
         {
+            [Import]
+            private SpellingServiceFactory spellingService = null;
+
             /// <summary>
             /// Creates a tag provider for the specified buffer
             /// </summary>
@@ -57,11 +62,16 @@ namespace VisualStudio.SpellChecker.NaturalTextTaggers
             /// checking as you type is disabled.</returns>
             public ITagger<T> CreateTagger<T>(ITextBuffer buffer) where T : ITag
             {
-                // If no buffer, not enabled, excluded by extension, or the content type is one of the more
-                // derived types, don't use this one.
-                if(buffer == null || !SpellCheckerConfiguration.SpellCheckAsYouType ||
-                  SpellCheckerConfiguration.IsExcludedByExtension(buffer.GetFilenameExtension()) ||
-                  buffer.ContentType.IsOfType("code") || buffer.ContentType.IsOfType("html"))
+                // If no buffer, not enabled, or the content type is one of the more derived types, don't use
+                // this one.
+                if(buffer == null || spellingService == null || buffer.ContentType.IsOfType("code") ||
+                  buffer.ContentType.IsOfType("html"))
+                    return null;
+
+                // Getting the configuration determines if spell checking is enabled for this file
+                var config = spellingService.GetConfiguration(buffer);
+
+                if(config == null)
                     return null;
 
                 return new PlainTextTagger() as ITagger<T>;
@@ -80,7 +90,7 @@ namespace VisualStudio.SpellChecker.NaturalTextTaggers
         }
         #endregion
 
-        #region ITagger<INaturalTextTag> Members
+        #region ITagger<NaturalTextTag> Members
         //=====================================================================
 
         /// <inheritdoc />

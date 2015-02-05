@@ -2,7 +2,7 @@
 // System  : Visual Studio Spell Checker Package
 // File    : XmlFilesUserControl.xaml.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 01/25/2015
+// Updated : 02/02/2015
 // Note    : Copyright 2014-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -18,10 +18,13 @@
 // 06/09/2014  EFW  Moved the XML files settings to a user control
 //===============================================================================================================
 
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+
+using VisualStudio.SpellChecker.Configuration;
 
 namespace VisualStudio.SpellChecker.UI
 {
@@ -70,15 +73,30 @@ namespace VisualStudio.SpellChecker.UI
         }
 
         /// <inheritdoc />
-        public void LoadConfiguration()
+        public void LoadConfiguration(SpellingConfigurationFile configuration)
         {
+            IEnumerable<string> words;
+
             lbIgnoredXmlElements.Items.Clear();
             lbSpellCheckedAttributes.Items.Clear();
 
-            foreach(string el in SpellCheckerConfiguration.IgnoredXmlElements)
+            if(configuration.HasProperty(PropertyNames.IgnoredXmlElements))
+                words = configuration.ToValues(PropertyNames.IgnoredXmlElements, PropertyNames.IgnoredXmlElementsItem);
+            else
+                words = SpellCheckerConfiguration.DefaultIgnoredXmlElements;
+
+            foreach(string el in words)
                 lbIgnoredXmlElements.Items.Add(el);
 
-            foreach(string el in SpellCheckerConfiguration.SpellCheckedXmlAttributes)
+            if(configuration.HasProperty(PropertyNames.SpellCheckedXmlAttributes))
+            {
+                words = configuration.ToValues(PropertyNames.SpellCheckedXmlAttributes,
+                    PropertyNames.SpellCheckedXmlAttributesItem);
+            }
+            else
+                words = SpellCheckerConfiguration.DefaultSpellCheckedAttributes;
+
+            foreach(string el in words)
                 lbSpellCheckedAttributes.Items.Add(el);
 
             var sd = new SortDescription { Direction = ListSortDirection.Ascending };
@@ -88,10 +106,25 @@ namespace VisualStudio.SpellChecker.UI
         }
 
         /// <inheritdoc />
-        public bool SaveConfiguration()
+        public bool SaveConfiguration(SpellingConfigurationFile configuration)
         {
-            SpellCheckerConfiguration.SetIgnoredXmlElements(lbIgnoredXmlElements.Items.OfType<string>());
-            SpellCheckerConfiguration.SetSpellCheckedXmlAttributes(lbSpellCheckedAttributes.Items.OfType<string>());
+            HashSet<string> newList = new HashSet<string>(lbIgnoredXmlElements.Items.OfType<string>()),
+                defaultList = new HashSet<string>(SpellCheckerConfiguration.DefaultIgnoredXmlElements);
+
+            if(defaultList.SetEquals(newList))
+                newList = null;
+
+            configuration.StoreValues(PropertyNames.IgnoredXmlElements, PropertyNames.IgnoredXmlElementsItem,
+                newList);
+
+            newList = new HashSet<string>(lbSpellCheckedAttributes.Items.OfType<string>());
+            defaultList = new HashSet<string>(SpellCheckerConfiguration.DefaultSpellCheckedAttributes);
+
+            if(defaultList.SetEquals(newList))
+                newList = null;
+
+            configuration.StoreValues(PropertyNames.SpellCheckedXmlAttributes,
+                PropertyNames.SpellCheckedXmlAttributesItem, newList);
 
             return true;
         }
