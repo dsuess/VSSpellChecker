@@ -191,8 +191,7 @@ namespace VisualStudio.SpellChecker.Configuration
         }
 
         /// <summary>
-        /// This read-only property returns an enumerable list of ignored words that will not be spell
-        /// checked.
+        /// This read-only property returns an enumerable list of ignored words that will not be spell checked
         /// </summary>
         public IEnumerable<string> IgnoredWords
         {

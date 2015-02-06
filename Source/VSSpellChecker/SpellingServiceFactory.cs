@@ -90,19 +90,19 @@ namespace VisualStudio.SpellChecker
         {
             SpellingDictionary service = null;
 
-            if(buffer != null)
+            if(buffer != null && !buffer.Properties.TryGetProperty(typeof(SpellingDictionary), out service))
             {
                 // Get the configuration and create the dictionary based on the configuration
                 var config = this.GetConfiguration(buffer);
 
-                if(config != null && !buffer.Properties.TryGetProperty(typeof(SpellingDictionary), out service))
+                if(config != null)
                 {
                     // Create or get the existing global dictionary for the default language
                     var globalDictionary = GlobalDictionary.CreateGlobalDictionary(config.DefaultLanguage);
 
                     if(globalDictionary != null)
                     {
-                        service = new SpellingDictionary(globalDictionary);
+                        service = new SpellingDictionary(globalDictionary, config.IgnoredWords);
                         buffer.Properties[typeof(SpellingDictionary)] = service;
                     }
                 }

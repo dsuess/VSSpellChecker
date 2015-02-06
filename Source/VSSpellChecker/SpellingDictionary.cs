@@ -2,7 +2,7 @@
 // System  : Visual Studio Spell Checker Package
 // File    : SpellingDictionary.cs
 // Authors : Noah Richards, Roman Golovin, Michael Lehenbauer, Eric Woodruff
-// Updated : 02/04/2015
+// Updated : 02/05/2015
 // Note    : Copyright 2010-2015, Microsoft Corporation, All rights reserved
 //           Portions Copyright 2013-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
@@ -23,6 +23,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 using Microsoft.VisualStudio.Text;
 
@@ -40,6 +41,8 @@ namespace VisualStudio.SpellChecker
         //=====================================================================
 
         private GlobalDictionary globalDictionary;
+        private IEnumerable<string> ignoredWords;
+
         #endregion
 
         #region Constructor
@@ -48,11 +51,12 @@ namespace VisualStudio.SpellChecker
         /// <summary>
         /// Constructor
         /// </summary>
-        /// <param name="bufferSpecificDictionaries">A list of buffer-specific dictionaries</param>
         /// <param name="globalDictionary">The global dictionary</param>
-        public SpellingDictionary(GlobalDictionary globalDictionary)
+        /// <param name="ignoredWords">An optional enumerable list of ignored words</param>
+        public SpellingDictionary(GlobalDictionary globalDictionary, IEnumerable<string> ignoredWords)
         {
             this.globalDictionary = globalDictionary;
+            this.ignoredWords = (ignoredWords ?? Enumerable.Empty<string>());
 
             // Register to receive events when the global dictionary is updated
             globalDictionary.RegisterSpellingDictionaryService(this);
@@ -134,9 +138,7 @@ namespace VisualStudio.SpellChecker
         /// <returns>True if the word should be ignored, false if not</returns>
         public bool ShouldIgnoreWord(string word)
         {
-            // TODO: Should have a local copy of the configuration ignored words as they may vary by file once
-            // solution/project-specific settings are implemented.
-            if(SpellCheckerConfiguration.GlobalConfiguration.ShouldIgnoreWord(word))
+            if(String.IsNullOrWhiteSpace(word) || ignoredWords.Contains(word))
                 return true;
 
             return globalDictionary.ShouldIgnoreWord(word);

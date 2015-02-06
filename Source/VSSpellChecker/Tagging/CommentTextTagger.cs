@@ -2,7 +2,7 @@
 // System  : Visual Studio Spell Checker Package
 // File    : CommentTextTagger.cs
 // Authors : Noah Richards, Roman Golovin, Michael Lehenbauer, Eric Woodruff
-// Updated : 02/04/2015
+// Updated : 02/05/2015
 // Note    : Copyright 2010-2015, Microsoft Corporation, All rights reserved
 //           Portions Copyright 2013-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
@@ -30,6 +30,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Diagnostics;
+using System.Linq;
 
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Classification;
@@ -53,7 +54,7 @@ namespace VisualStudio.SpellChecker.Tagging
 
         private ITextBuffer _buffer;
         private IClassifier _classifier;
-        private HashSet<string> ignoredXmlElements, spellCheckedXmlAttributes;
+        private IEnumerable<string> ignoredXmlElements, spellCheckedXmlAttributes;
         #endregion
 
         #region MEF Imports / Exports
@@ -108,40 +109,11 @@ namespace VisualStudio.SpellChecker.Tagging
                     } as ITagger<T>;
                 }
 
-                var tagger = new CommentTextTagger(buffer, classifierAggregatorService.GetClassifier(buffer));
-
-                // TODO: These should be accessed through the configuration or just grab a copy of the underlying hash set
-                // Add the XML elements in which to ignore content and the XML attributes that will have their
-                // content spell checked.
-                foreach(string element in config.IgnoredXmlElements)
-                    tagger.IgnoredElementNames.Add(element);
-
-                foreach(string attr in config.SpellCheckedXmlAttributes)
-                    tagger.SpellCheckAttributeNames.Add(attr);
+                var tagger = new CommentTextTagger(buffer, classifierAggregatorService.GetClassifier(buffer),
+                    config.IgnoredXmlElements, config.SpellCheckedXmlAttributes);
 
                 return tagger as ITagger<T>;
             }
-        }
-        #endregion
-
-        #region Properties
-        //=====================================================================
-
-        /// <summary>
-        /// This read-only property is used to get the hash set of ignored element names
-        /// </summary>
-        public HashSet<string> IgnoredElementNames
-        {
-            get { return ignoredXmlElements; }
-        }
-
-        /// <summary>
-        /// This read-only property is used to get the hash set of attribute names that should have their
-        /// values spell checked.
-        /// </summary>
-        public HashSet<string> SpellCheckAttributeNames
-        {
-            get { return spellCheckedXmlAttributes; }
         }
         #endregion
 
@@ -153,15 +125,18 @@ namespace VisualStudio.SpellChecker.Tagging
         /// </summary>
         /// <param name="buffer">The text buffer</param>
         /// <param name="classifier">The classifier</param>
-        public CommentTextTagger(ITextBuffer buffer, IClassifier classifier)
+        /// <param name="ignoredXmlElements">An optional enumerable list of ignored XML elements</param>
+        /// <param name="spellCheckedXmlAttributes">An optional enumerable list of spell checked XML attributes</param>
+        public CommentTextTagger(ITextBuffer buffer, IClassifier classifier, IEnumerable<string> ignoredXmlElements,
+          IEnumerable<string> spellCheckedXmlAttributes)
         {
             _buffer = buffer;
             _classifier = classifier;
 
             classifier.ClassificationChanged += ClassificationChanged;
 
-            ignoredXmlElements = new HashSet<string>();
-            spellCheckedXmlAttributes = new HashSet<string>();
+            this.ignoredXmlElements = (ignoredXmlElements ?? Enumerable.Empty<string>());
+            this.spellCheckedXmlAttributes = (spellCheckedXmlAttributes ?? Enumerable.Empty<string>());
         }
         #endregion
 
