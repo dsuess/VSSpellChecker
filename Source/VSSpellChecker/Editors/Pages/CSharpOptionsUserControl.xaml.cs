@@ -2,7 +2,7 @@
 // System  : Visual Studio Spell Checker Package
 // File    : CSharpOptionsUserControl.xaml.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 02/02/2015
+// Updated : 02/08/2015
 // Note    : Copyright 2014-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -18,11 +18,13 @@
 // 06/12/2014  EFW  Created the code
 //===============================================================================================================
 
+using System;
+using System.Collections.Generic;
 using System.Windows.Controls;
 
 using VisualStudio.SpellChecker.Configuration;
 
-namespace VisualStudio.SpellChecker.UI
+namespace VisualStudio.SpellChecker.Editors.Pages
 {
     /// <summary>
     /// This user control is used to edit the C# spell checker configuration settings
@@ -63,45 +65,74 @@ namespace VisualStudio.SpellChecker.UI
         }
 
         /// <inheritdoc />
-        public bool IsValid
-        {
-            get { return true; }
-        }
-
-        /// <inheritdoc />
         public void LoadConfiguration(SpellingConfigurationFile configuration)
         {
-            chkIgnoreXmlDocComments.IsChecked = configuration.ToBoolean(
+            var dataSource = new List<PropertyState>();
+            
+            if(configuration.ConfigurationType != ConfigurationType.Global)
+                dataSource.AddRange(new[] { PropertyState.Inherited, PropertyState.Yes, PropertyState.No });
+            else
+                dataSource.AddRange(new[] { PropertyState.Yes, PropertyState.No });
+
+            cboIgnoreXmlDocComments.ItemsSource = cboIgnoreDelimitedComments.ItemsSource =
+                cboIgnoreStandardSingleLineComments.ItemsSource = cboIgnoreQuadrupleSlashComments.ItemsSource =
+                cboIgnoreNormalStrings.ItemsSource = cboIgnoreVerbatimStrings.ItemsSource = dataSource;
+
+            cboIgnoreXmlDocComments.SelectedValue = configuration.ToPropertyState(
                 PropertyNames.CSharpOptionsIgnoreXmlDocComments);
-            chkIgnoreDelimitedComments.IsChecked = configuration.ToBoolean(
+
+            cboIgnoreDelimitedComments.SelectedValue = configuration.ToPropertyState(
                 PropertyNames.CSharpOptionsIgnoreDelimitedComments);
-            chkIgnoreStandardSingleLineComments.IsChecked = configuration.ToBoolean(
+
+            cboIgnoreStandardSingleLineComments.SelectedValue = configuration.ToPropertyState(
                 PropertyNames.CSharpOptionsIgnoreStandardSingleLineComments);
-            chkIgnoreQuadrupleSlashComments.IsChecked = configuration.ToBoolean(
+
+            cboIgnoreQuadrupleSlashComments.SelectedValue = configuration.ToPropertyState(
                 PropertyNames.CSharpOptionsIgnoreQuadrupleSlashComments);
-            chkIgnoreNormalStrings.IsChecked = configuration.ToBoolean(
+
+            cboIgnoreNormalStrings.SelectedValue = configuration.ToPropertyState(
                 PropertyNames.CSharpOptionsIgnoreNormalStrings);
-            chkIgnoreVerbatimStrings.IsChecked = configuration.ToBoolean(
+
+            cboIgnoreVerbatimStrings.SelectedValue = configuration.ToPropertyState(
                 PropertyNames.CSharpOptionsIgnoreVerbatimStrings);
         }
 
         /// <inheritdoc />
-        public bool SaveConfiguration(SpellingConfigurationFile configuration)
+        public void SaveConfiguration(SpellingConfigurationFile configuration)
         {
             configuration.StoreProperty(PropertyNames.CSharpOptionsIgnoreXmlDocComments,
-                chkIgnoreXmlDocComments.IsChecked.Value);
+                ((PropertyState)cboIgnoreXmlDocComments.SelectedValue).ToPropertyValue());
             configuration.StoreProperty(PropertyNames.CSharpOptionsIgnoreDelimitedComments,
-                chkIgnoreDelimitedComments.IsChecked.Value);
+                ((PropertyState)cboIgnoreDelimitedComments.SelectedValue).ToPropertyValue());
             configuration.StoreProperty(PropertyNames.CSharpOptionsIgnoreStandardSingleLineComments,
-                chkIgnoreStandardSingleLineComments.IsChecked.Value);
+                ((PropertyState)cboIgnoreStandardSingleLineComments.SelectedValue).ToPropertyValue());
             configuration.StoreProperty(PropertyNames.CSharpOptionsIgnoreQuadrupleSlashComments,
-                chkIgnoreQuadrupleSlashComments.IsChecked.Value);
+                ((PropertyState)cboIgnoreQuadrupleSlashComments.SelectedValue).ToPropertyValue());
             configuration.StoreProperty(PropertyNames.CSharpOptionsIgnoreNormalStrings,
-                chkIgnoreNormalStrings.IsChecked.Value);
+                ((PropertyState)cboIgnoreNormalStrings.SelectedValue).ToPropertyValue());
             configuration.StoreProperty(PropertyNames.CSharpOptionsIgnoreVerbatimStrings,
-                chkIgnoreVerbatimStrings.IsChecked.Value);
+                ((PropertyState)cboIgnoreVerbatimStrings.SelectedValue).ToPropertyValue());
+        }
 
-            return true;
+        /// <inheritdoc />
+        public event EventHandler ConfigurationChanged;
+
+        #endregion
+
+        #region Event handlers
+        //=====================================================================
+
+        /// <summary>
+        /// Notify the parent of property changes that affect the file's dirty state
+        /// </summary>
+        /// <param name="sender">The sender of the event</param>
+        /// <param name="e">The event arguments</param>
+        private void Property_Changed(object sender, System.Windows.RoutedEventArgs e)
+        {
+            var handler = ConfigurationChanged;
+
+            if(handler != null)
+                handler(this, EventArgs.Empty);
         }
         #endregion
     }

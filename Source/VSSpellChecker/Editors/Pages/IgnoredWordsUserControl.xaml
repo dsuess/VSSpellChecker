@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="VisualStudio.SpellChecker.UI.IgnoredWordsUserControl"
+﻿<UserControl x:Class="VisualStudio.SpellChecker.Editors.Pages.IgnoredWordsUserControl"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
@@ -6,8 +6,9 @@
              mc:Ignorable="d" 
              d:DesignHeight="375" d:DesignWidth="500">
 	<Grid>
-		<Grid>
+		<Grid Name="gridIgnoredWords">
 			<Grid.RowDefinitions>
+				<RowDefinition Height="Auto" />
 				<RowDefinition Height="Auto" />
 				<RowDefinition Height="Auto" />
 				<RowDefinition />
@@ -19,13 +20,19 @@ programming terms, etc.<LineBreak/><LineBreak/>
 Escaped words are a special class of ignored words.  These are words that start with what looks like a valid
 escape sequence (\a, \t, etc.) but the remainder of the word should not appear as a misspelled word.  The default
 set includes common Doxygen tags that fit this category.</TextBlock>
-			<StackPanel Orientation="Horizontal" Grid.Row="1" Margin="3">
+			<CheckBox Name="chkInheritIgnoredWords" Grid.Row="1" Margin="3" Checked="Property_Changed"
+				Unchecked="Property_Changed">
+				<TextBlock TextWrapping="Wrap">
+					Inherit ignored words.  Any words below will be added to the inherited words.
+				</TextBlock>
+			</CheckBox>
+			<StackPanel Orientation="Horizontal" Grid.Row="2" Margin="3">
 				<TextBox Name="txtIgnoredWord" Width="250" Margin="0, 0, 3, 0" />
 				<Button Name="btnAddIgnoredWord" Content="Add" Width="50" ToolTip="Add new ignored word"
 									Click="btnAddIgnoredWord_Click" />
 			</StackPanel>
-			<ListBox Name="lbIgnoredWords" Grid.Row="2" Margin="3" />
-			<StackPanel Orientation="Horizontal" Grid.Row="3" Margin="3">
+			<ListBox Name="lbIgnoredWords" Grid.Row="3" Margin="3" />
+			<StackPanel Orientation="Horizontal" Grid.Row="4" Margin="3">
 				<Button Name="btnRemoveIgnoredWord" Content="Remove" Width="80" Margin="0, 0, 3, 0"
 									ToolTip="Remove selected ignored word" Click="btnRemoveIgnoredWord_Click" />
 				<Button Name="btnDefaultIgnoredWords" Content="Default" Width="80"

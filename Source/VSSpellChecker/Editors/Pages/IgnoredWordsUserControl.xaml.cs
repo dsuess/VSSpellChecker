@@ -2,7 +2,7 @@
 // System  : Visual Studio Spell Checker Package
 // File    : IgnoredWordsUserControl.xaml.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 02/02/2015
+// Updated : 02/08/2015
 // Note    : Copyright 2014-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -27,7 +27,7 @@ using System.Windows.Controls;
 
 using VisualStudio.SpellChecker.Configuration;
 
-namespace VisualStudio.SpellChecker.UI
+namespace VisualStudio.SpellChecker.Editors.Pages
 {
     /// <summary>
     /// This user control is used to edit the ignored words spell checker configuration settings
@@ -68,21 +68,26 @@ namespace VisualStudio.SpellChecker.UI
         }
 
         /// <inheritdoc />
-        public bool IsValid
-        {
-            get { return true; }
-        }
-
-        /// <inheritdoc />
         public void LoadConfiguration(SpellingConfigurationFile configuration)
         {
             IEnumerable<string> words;
             lbIgnoredWords.Items.Clear();
 
+            if(configuration.ConfigurationType == ConfigurationType.Global)
+            {
+                chkInheritIgnoredWords.IsChecked = false;
+                chkInheritIgnoredWords.Visibility = Visibility.Collapsed;
+            }
+            else
+                chkInheritIgnoredWords.IsChecked = configuration.ToBoolean(PropertyNames.InheritIgnoredWords);
+
             if(configuration.HasProperty(PropertyNames.IgnoredWords))
                 words = configuration.ToValues(PropertyNames.IgnoredWords, PropertyNames.IgnoredWordsItem);
             else
-                words = SpellCheckerConfiguration.DefaultIgnoredWords;
+                if(!chkInheritIgnoredWords.IsChecked.Value && configuration.ConfigurationType == ConfigurationType.Global)
+                    words = SpellCheckerConfiguration.DefaultIgnoredWords;
+                else
+                    words = Enumerable.Empty<string>();
 
             foreach(string el in words)
                 lbIgnoredWords.Items.Add(el);
@@ -93,25 +98,27 @@ namespace VisualStudio.SpellChecker.UI
         }
 
         /// <inheritdoc />
-        public bool SaveConfiguration(SpellingConfigurationFile configuration)
+        public void SaveConfiguration(SpellingConfigurationFile configuration)
         {
-            HashSet<string> newList = new HashSet<string>(lbIgnoredWords.Items.OfType<string>()),
-                defaultList = new HashSet<string>(SpellCheckerConfiguration.DefaultIgnoredWords);
+            HashSet<string> newList = null;
 
-            if(defaultList.SetEquals(newList))
-                newList = null;
+            if(lbIgnoredWords.Items.Count != 0)
+                newList = new HashSet<string>(lbIgnoredWords.Items.OfType<string>());
 
+            configuration.StoreProperty(PropertyNames.InheritIgnoredWords, chkInheritIgnoredWords.IsChecked);
             configuration.StoreValues(PropertyNames.IgnoredWords, PropertyNames.IgnoredWordsItem, newList);
-
-            return true;
         }
+
+        /// <inheritdoc />
+        public event EventHandler ConfigurationChanged;
+
         #endregion
 
         #region Event handlers
         //=====================================================================
 
         /// <summary>
-        /// Add a new ignored word to the list
+        /// Add one or more new ignored word to the list
         /// </summary>
         /// <param name="sender">The sender of the event</param>
         /// <param name="e">The event arguments</param>
@@ -122,28 +129,35 @@ namespace VisualStudio.SpellChecker.UI
 
             txtIgnoredWord.Text = txtIgnoredWord.Text.Trim();
 
-            if(txtIgnoredWord.Text.Length < 3 && txtIgnoredWord.Text[0] == '\\')
-                txtIgnoredWord.Text = String.Empty;
-            else
-                if(txtIgnoredWord.Text.Length > 1 && txtIgnoredWord.Text[0] == '\\' &&
-                  !escapedLetters.Contains(txtIgnoredWord.Text[1]))
-                    txtIgnoredWord.Text = txtIgnoredWord.Text.Substring(1);
-
             if(txtIgnoredWord.Text.Length != 0)
-            {
-                idx = lbIgnoredWords.Items.IndexOf(txtIgnoredWord.Text);
-
-                if(idx == -1)
-                    idx = lbIgnoredWords.Items.Add(txtIgnoredWord.Text);
-
-                if(idx != -1)
+                foreach(string word in txtIgnoredWord.Text.Split(new[] { ' ', '\t', ',', '.' },
+                  StringSplitOptions.RemoveEmptyEntries))
                 {
-                    lbIgnoredWords.SelectedIndex = idx;
-                    lbIgnoredWords.ScrollIntoView(lbIgnoredWords.Items[idx]);
+                    string addWord = word;
+
+                    if(addWord.Length < 3 && addWord[0] == '\\')
+                        addWord = String.Empty;
+                    else
+                        if(addWord.Length > 1 && addWord[0] == '\\' && !escapedLetters.Contains(addWord[1]))
+                            addWord = addWord.Substring(1);
+
+                    if(addWord.Length > 2)
+                    {
+                        idx = lbIgnoredWords.Items.IndexOf(addWord);
+
+                        if(idx == -1)
+                            idx = lbIgnoredWords.Items.Add(addWord);
+
+                        if(idx != -1)
+                        {
+                            lbIgnoredWords.SelectedIndex = idx;
+                            lbIgnoredWords.ScrollIntoView(lbIgnoredWords.Items[idx]);
+                        }
+                    }
                 }
-            }
 
             txtIgnoredWord.Text = null;
+            Property_Changed(sender, e);
         }
 
         /// <summary>
@@ -168,10 +182,12 @@ namespace VisualStudio.SpellChecker.UI
 
                 lbIgnoredWords.SelectedIndex = idx;
             }
+
+            Property_Changed(sender, e);
         }
 
         /// <summary>
-        /// Reset the ignored words to the default list
+        /// Reset the ignored words to the default list or blank if inherited
         /// </summary>
         /// <param name="sender">The sender of the event</param>
         /// <param name="e">The event arguments</param>
@@ -179,12 +195,27 @@ namespace VisualStudio.SpellChecker.UI
         {
             lbIgnoredWords.Items.Clear();
 
-            foreach(string el in SpellCheckerConfiguration.DefaultIgnoredWords)
-                lbIgnoredWords.Items.Add(el);
+            if(!chkInheritIgnoredWords.IsChecked.Value)
+                foreach(string el in SpellCheckerConfiguration.DefaultIgnoredWords)
+                    lbIgnoredWords.Items.Add(el);
 
             var sd = new SortDescription { Direction = ListSortDirection.Ascending };
-
             lbIgnoredWords.Items.SortDescriptions.Add(sd);
+
+            Property_Changed(sender, e);
+        }
+
+        /// <summary>
+        /// Notify the parent of property changes that affect the file's dirty state
+        /// </summary>
+        /// <param name="sender">The sender of the event</param>
+        /// <param name="e">The event arguments</param>
+        private void Property_Changed(object sender, System.Windows.RoutedEventArgs e)
+        {
+            var handler = ConfigurationChanged;
+
+            if(handler != null)
+                handler(this, EventArgs.Empty);
         }
         #endregion
     }

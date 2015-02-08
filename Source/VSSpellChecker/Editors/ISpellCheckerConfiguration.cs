@@ -2,7 +2,7 @@
 // System  : Visual Studio Spell Checker Package
 // File    : ISpellCheckerConfiguration.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 02/02/2015
+// Updated : 02/08/2015
 // Note    : Copyright 2014-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -18,11 +18,12 @@
 // 06/09/2013  EFW  Created the code
 //===============================================================================================================
 
+using System;
 using System.Windows.Controls;
 
 using VisualStudio.SpellChecker.Configuration;
 
-namespace VisualStudio.SpellChecker.UI
+namespace VisualStudio.SpellChecker.Editors
 {
     /// <summary>
     /// This interface is implemented by the spell checker configuration user controls
@@ -45,12 +46,6 @@ namespace VisualStudio.SpellChecker.UI
         string HelpUrl { get; }
 
         /// <summary>
-        /// This read-only property is used to validate the configuration settings in the user control
-        /// </summary>
-        /// <returns>True if valid, false if not</returns>
-        bool IsValid { get; }
-
-        /// <summary>
         /// Load the configuration settings for the control
         /// </summary>
         /// <param name="configuration">The configuration file from which to load settings</param>
@@ -59,7 +54,11 @@ namespace VisualStudio.SpellChecker.UI
         /// <summary>
         /// Save the configuration settings for the control to the given configuration file
         /// </summary>
-        /// <returns>True if saved successfully, false if not</returns>
-        bool SaveConfiguration(SpellingConfigurationFile configuration);
+        void SaveConfiguration(SpellingConfigurationFile configuration);
+
+        /// <summary>
+        /// This event is raised to notify the parent of changes to the configuration
+        /// </summary>
+        event EventHandler ConfigurationChanged;
     }
 }

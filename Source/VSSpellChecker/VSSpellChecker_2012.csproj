@@ -50,6 +50,15 @@
     <Compile Include="Configuration\CSharpOptions.cs" />
     <Compile Include="Configuration\PropertyNames.cs" />
     <Compile Include="Configuration\SpellingConfigurationFile.cs" />
+    <Compile Include="Editors\CommandTargetArguments.cs" />
+    <Compile Include="Editors\ICommonCommandSupport.cs" />
+    <Compile Include="Editors\SimpleEditorFactory.cs" />
+    <Compile Include="Editors\SimpleEditorPane.cs" />
+    <Compile Include="Editors\SpellingConfigurationEditorControl.xaml.cs">
+      <DependentUpon>SpellingConfigurationEditorControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Editors\SpellingConfigurationEditorFactory.cs" />
+    <Compile Include="Editors\SpellingConfigurationEditorPane.cs" />
     <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="Guids.cs">
     </Compile>
@@ -92,23 +101,20 @@
     <Compile Include="SpellingTaggerProvider.cs" />
     <Compile Include="Squiggles\SpellSquiggleTag.cs" />
     <Compile Include="Squiggles\SquiggleTagger.cs" />
-    <Compile Include="UI\CSharpOptionsUserControl.xaml.cs">
+    <Compile Include="Editors\Pages\CSharpOptionsUserControl.xaml.cs">
       <DependentUpon>CSharpOptionsUserControl.xaml</DependentUpon>
     </Compile>
-    <Compile Include="UI\GeneralSettingsUserControl.xaml.cs">
+    <Compile Include="Editors\Pages\GeneralSettingsUserControl.xaml.cs">
       <DependentUpon>GeneralSettingsUserControl.xaml</DependentUpon>
     </Compile>
-    <Compile Include="UI\IgnoredWordsUserControl.xaml.cs">
+    <Compile Include="Editors\Pages\IgnoredWordsUserControl.xaml.cs">
       <DependentUpon>IgnoredWordsUserControl.xaml</DependentUpon>
     </Compile>
-    <Compile Include="UI\ISpellCheckerConfiguration.cs" />
-    <Compile Include="UI\SpellCheckerConfigDlg.xaml.cs">
-      <DependentUpon>SpellCheckerConfigDlg.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="UI\UserDictionaryUserControl.xaml.cs">
+    <Compile Include="Editors\ISpellCheckerConfiguration.cs" />
+    <Compile Include="Editors\Pages\UserDictionaryUserControl.xaml.cs">
       <DependentUpon>UserDictionaryUserControl.xaml</DependentUpon>
     </Compile>
-    <Compile Include="UI\XmlFilesUserControl.xaml.cs">
+    <Compile Include="Editors\Pages\XmlFilesUserControl.xaml.cs">
       <DependentUpon>XmlFilesUserControl.xaml</DependentUpon>
     </Compile>
     <Compile Include="Utility.cs" />
@@ -269,31 +275,31 @@
     </COMReference>
   </ItemGroup>
   <ItemGroup>
+    <Page Include="Editors\SpellingConfigurationEditorControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="ToolWindows\InteractiveSpellCheckControl.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="UI\CSharpOptionsUserControl.xaml">
+    <Page Include="Editors\Pages\CSharpOptionsUserControl.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="UI\GeneralSettingsUserControl.xaml">
+    <Page Include="Editors\Pages\GeneralSettingsUserControl.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="UI\IgnoredWordsUserControl.xaml">
+    <Page Include="Editors\Pages\IgnoredWordsUserControl.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="UI\SpellCheckerConfigDlg.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="UI\UserDictionaryUserControl.xaml">
+    <Page Include="Editors\Pages\UserDictionaryUserControl.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="UI\XmlFilesUserControl.xaml">
+    <Page Include="Editors\Pages\XmlFilesUserControl.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>

@@ -109,6 +109,11 @@ namespace VisualStudio.SpellChecker.Configuration
         public const string CSharpOptionsIgnoreVerbatimStrings = "CSharpOptions.IgnoreVerbatimStrings";
 
         /// <summary>
+        /// Inherit ignored words
+        /// </summary>
+        public const string InheritIgnoredWords = "InheritIgnoredWords";
+
+        /// <summary>
         /// Ignored words
         /// </summary>
         public const string IgnoredWords = "IgnoredWords";
@@ -117,6 +122,11 @@ namespace VisualStudio.SpellChecker.Configuration
         /// Ignored words item
         /// </summary>
         public const string IgnoredWordsItem = "Ignore";
+
+        /// <summary>
+        /// Inherit XML settings
+        /// </summary>
+        public const string InheritXmlSettings = "InheritXmlSettings";
 
         /// <summary>
         /// Ignored XML elements

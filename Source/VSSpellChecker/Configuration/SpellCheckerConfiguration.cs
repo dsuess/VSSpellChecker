@@ -2,7 +2,7 @@
 // System  : Visual Studio Spell Checker Package
 // File    : SpellCheckerConfiguration.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 02/01/2015
+// Updated : 02/07/2015
 // Note    : Copyright 2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -191,12 +191,29 @@ namespace VisualStudio.SpellChecker.Configuration
         }
 
         /// <summary>
+        /// This is used to indicate whether or not ignored words are inherited by other configurations
+        /// </summary>
+        /// <value>The default is true so that sub-configurations inherit all ignored words from higher level
+        /// configurations.</value>
+        [DefaultValue(true)]
+        public bool InheritIgnoredWords { get; set; }
+
+        /// <summary>
         /// This read-only property returns an enumerable list of ignored words that will not be spell checked
         /// </summary>
         public IEnumerable<string> IgnoredWords
         {
             get { return ignoredWords; }
         }
+
+        /// <summary>
+        /// This is used to indicate whether or not ignored XML elements and included attributes are inherited by
+        /// other configurations.
+        /// </summary>
+        /// <value>The default is true so that sub-configurations inherit all ignored XML elements and included
+        /// attributes from higher level configurations.</value>
+        [DefaultValue(true)]
+        public bool InheritXmlSettings { get; set; }
 
         /// <summary>
         /// This read-only property returns an enumerable list of ignored XML element names that will not have
@@ -312,7 +329,7 @@ namespace VisualStudio.SpellChecker.Configuration
 
             this.SpellCheckAsYouType = this.IgnoreWordsWithDigits = this.IgnoreWordsInAllUppercase =
                 this.IgnoreFormatSpecifiers = this.IgnoreFilenamesAndEMailAddresses =
-                this.IgnoreXmlElementsInText = true;
+                this.IgnoreXmlElementsInText = this.InheritIgnoredWords = this.InheritXmlSettings = true;
 
             this.TreatUnderscoreAsSeparator = false;
             this.IgnoreCharacterClass = IgnoredCharacterClass.None;

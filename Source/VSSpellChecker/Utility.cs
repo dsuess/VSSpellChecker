@@ -2,7 +2,7 @@
 // System  : Sandcastle Help File Builder Visual Studio Package
 // File    : Utility.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 01/30/2015
+// Updated : 02/08/2015
 // Note    : Copyright 2013-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -19,7 +19,6 @@
 //===============================================================================================================
 
 using System;
-using System.Drawing;
 using System.Globalization;
 using System.IO;
 
@@ -27,6 +26,8 @@ using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.Text;
 
+using VisualStudio.SpellChecker.Configuration;
+using VisualStudio.SpellChecker.Editors;
 using VisualStudio.SpellChecker.Properties;
 
 namespace VisualStudio.SpellChecker
@@ -110,6 +111,35 @@ namespace VisualStudio.SpellChecker
 
             return extension;
         }
+        #endregion
+
+        #region Property state conversion methods
+        //=====================================================================
+
+        /// <summary>
+        /// Convert the named property value to the appropriate selection state
+        /// </summary>
+        /// <param name="configuration">The configuration file from which to obtain the property value</param>
+        /// <param name="propertyName">The name of the property to get</param>
+        /// <returns>The selection state based on the specified property's value</returns>
+        public static PropertyState ToPropertyState(this SpellingConfigurationFile configuration,
+          string propertyName)
+        {
+            return !configuration.HasProperty(propertyName) &&
+                configuration.ConfigurationType != ConfigurationType.Global ? PropertyState.Inherited :
+                configuration.ToBoolean(propertyName) ? PropertyState.Yes : PropertyState.No;
+        }
+
+        /// <summary>
+        /// Convert the selection state value to a property value
+        /// </summary>
+        /// <param name="state">The selection state to convert</param>
+        /// <returns>The appropriate property value to store</returns>
+        public static bool? ToPropertyValue(this PropertyState state)
+        {
+            return (state == PropertyState.Inherited) ? (bool?)null : state == PropertyState.Yes ? true : false;
+        }
+
         #endregion
     }
 }

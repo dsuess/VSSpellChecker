@@ -2,7 +2,7 @@
 // System  : Visual Studio Spell Checker Package
 // File    : UserDictionaryUserControl.xaml.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 02/02/2015
+// Updated : 02/08/2015
 // Note    : Copyright 2014-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -32,7 +32,7 @@ using PackageResources = VisualStudio.SpellChecker.Properties.Resources;
 
 using VisualStudio.SpellChecker.Configuration;
 
-namespace VisualStudio.SpellChecker.UI
+namespace VisualStudio.SpellChecker.Editors.Pages
 {
     /// <summary>
     /// This user control is used to edit the default language and user dictionary spell checker configuration
@@ -46,9 +46,6 @@ namespace VisualStudio.SpellChecker.UI
         public UserDictionaryUserControl()
         {
             InitializeComponent();
-
-            foreach(var lang in SpellCheckerConfiguration.AvailableDictionaryLanguages.OrderBy(c => c.Name))
-                cboDefaultLanguage.Items.Add(lang);
         }
         #endregion
 
@@ -74,47 +71,75 @@ namespace VisualStudio.SpellChecker.UI
         }
 
         /// <inheritdoc />
-        public bool IsValid
-        {
-            get { return true; }
-        }
-
-        /// <inheritdoc />
         public void LoadConfiguration(SpellingConfigurationFile configuration)
         {
-            var defaultLang = configuration.ToCultureInfo(PropertyNames.DefaultLanguage);
+            cboDefaultLanguage.Items.Clear();
 
-            if(cboDefaultLanguage.Items.Contains(defaultLang))
-                cboDefaultLanguage.SelectedItem = defaultLang;
-
-            switch(configuration.ToEnum<IgnoredCharacterClass>(PropertyNames.IgnoreCharacterClass))
+            if(configuration.ConfigurationType != ConfigurationType.Global)
             {
-                case IgnoredCharacterClass.NonAscii:
-                    rbIgnoreNonAscii.IsChecked = true;
-                    break;
-
-                case IgnoredCharacterClass.NonLatin:
-                    rbIgnoreNonLatin.IsChecked = true;
-                    break;
-
-                default:
-                    rbIncludeAll.IsChecked = true;
-                    break;
+                cboDefaultLanguage.Items.Add("Inherited");
+                rbInheritIgnoredCharClass.Visibility = Visibility.Visible;
             }
+            else
+                rbInheritIgnoredCharClass.Visibility = Visibility.Collapsed;
+
+            foreach(var lang in SpellCheckerConfiguration.AvailableDictionaryLanguages.OrderBy(c => c.Name))
+                cboDefaultLanguage.Items.Add(lang);
+
+            if(configuration.HasProperty(PropertyNames.DefaultLanguage))
+            {
+                var defaultLang = configuration.ToCultureInfo(PropertyNames.DefaultLanguage);
+
+                if(cboDefaultLanguage.Items.Contains(defaultLang))
+                    cboDefaultLanguage.SelectedItem = defaultLang;
+                else
+                    cboDefaultLanguage.SelectedIndex = 0;
+            }
+            else
+                cboDefaultLanguage.SelectedIndex = 0;
+
+            if(!configuration.HasProperty(PropertyNames.IgnoreCharacterClass) &&
+              configuration.ConfigurationType != ConfigurationType.Global)
+            {
+                rbInheritIgnoredCharClass.IsChecked = true;
+            }
+            else
+                switch(configuration.ToEnum<IgnoredCharacterClass>(PropertyNames.IgnoreCharacterClass))
+                {
+                    case IgnoredCharacterClass.NonAscii:
+                        rbIgnoreNonAscii.IsChecked = true;
+                        break;
+
+                    case IgnoredCharacterClass.NonLatin:
+                        rbIgnoreNonLatin.IsChecked = true;
+                        break;
+
+                    default:
+                        rbIncludeAll.IsChecked = true;
+                        break;
+                }
         }
 
         /// <inheritdoc />
-        public bool SaveConfiguration(SpellingConfigurationFile configuration)
+        public void SaveConfiguration(SpellingConfigurationFile configuration)
         {
-            configuration.StoreProperty(PropertyNames.DefaultLanguage,
-                ((CultureInfo)cboDefaultLanguage.SelectedItem).Name);
+            if(cboDefaultLanguage.SelectedIndex == 0 && configuration.ConfigurationType != ConfigurationType.Global)
+                configuration.StoreProperty(PropertyNames.DefaultLanguage, null);
+            else
+                configuration.StoreProperty(PropertyNames.DefaultLanguage,
+                    ((CultureInfo)cboDefaultLanguage.SelectedItem).Name);
 
-            configuration.StoreProperty(PropertyNames.IgnoreCharacterClass,
-                rbIncludeAll.IsChecked.Value ? IgnoredCharacterClass.None : rbIgnoreNonLatin.IsChecked.Value ?
-                    IgnoredCharacterClass.NonLatin : IgnoredCharacterClass.NonAscii);
-
-            return true;
+            if(rbInheritIgnoredCharClass.IsChecked.Value)
+                configuration.StoreProperty(PropertyNames.IgnoreCharacterClass, null);
+            else
+                configuration.StoreProperty(PropertyNames.IgnoreCharacterClass,
+                    rbIncludeAll.IsChecked.Value ? IgnoredCharacterClass.None : rbIgnoreNonLatin.IsChecked.Value ?
+                        IgnoredCharacterClass.NonLatin : IgnoredCharacterClass.NonAscii);
         }
+
+        /// <inheritdoc />
+        public event EventHandler ConfigurationChanged;
+
         #endregion
 
         #region Event handlers
@@ -127,27 +152,41 @@ namespace VisualStudio.SpellChecker.UI
         /// <param name="e">The event arguments</param>
         private void cboDefaultLanguage_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            string filename = Path.Combine(SpellingConfigurationFile.GlobalConfigurationFilePath,
-                ((CultureInfo)cboDefaultLanguage.SelectedItem).Name + "_User.dic");
+            if(cboDefaultLanguage.Items.Count != 0)
+            {
+                if(cboDefaultLanguage.SelectedItem.ToString() == "Inherited")
+                {
+                    lbUserDictionary.Items.Clear();
+                    grpUserDictionary.IsEnabled = false;
+                }
+                else
+                {
+                    string filename = Path.Combine(SpellingConfigurationFile.GlobalConfigurationFilePath,
+                        ((CultureInfo)cboDefaultLanguage.SelectedItem).Name + "_User.dic");
 
-            lbUserDictionary.Items.Clear();
+                    lbUserDictionary.Items.Clear();
+                    grpUserDictionary.IsEnabled = true;
 
-            if(File.Exists(filename))
-                try
-                {
-                    foreach(string word in File.ReadAllLines(filename))
-                        lbUserDictionary.Items.Add(word);
+                    if(File.Exists(filename))
+                        try
+                        {
+                            foreach(string word in File.ReadAllLines(filename))
+                                lbUserDictionary.Items.Add(word);
+                        }
+                        catch(Exception ex)
+                        {
+                            MessageBox.Show("Unable to load user dictionary.  Reason: " + ex.Message,
+                                PackageResources.PackageTitle, MessageBoxButton.OK, MessageBoxImage.Exclamation);
+                        }
+                        finally
+                        {
+                            var sd = new SortDescription { Direction = ListSortDirection.Ascending };
+                            lbUserDictionary.Items.SortDescriptions.Add(sd);
+                        }
                 }
-                catch(Exception ex)
-                {
-                    MessageBox.Show("Unable to load user dictionary.  Reason: " + ex.Message,
-                        PackageResources.PackageTitle, MessageBoxButton.OK, MessageBoxImage.Exclamation);
-                }
-                finally
-                {
-                    var sd = new SortDescription { Direction = ListSortDirection.Ascending };
-                    lbUserDictionary.Items.SortDescriptions.Add(sd);
-                }
+
+                Property_Changed(sender, e);
+            }
         }
 
         /// <summary>
@@ -281,6 +320,19 @@ namespace VisualStudio.SpellChecker.UI
                         MessageBoxButton.OK, MessageBoxImage.Exclamation);
                 }
             }
+        }
+
+        /// <summary>
+        /// Notify the parent of property changes that affect the file's dirty state
+        /// </summary>
+        /// <param name="sender">The sender of the event</param>
+        /// <param name="e">The event arguments</param>
+        private void Property_Changed(object sender, System.Windows.RoutedEventArgs e)
+        {
+            var handler = ConfigurationChanged;
+
+            if(handler != null)
+                handler(this, EventArgs.Empty);
         }
         #endregion
     }

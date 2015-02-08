@@ -2,7 +2,7 @@
 // System  : Visual Studio Spell Checker Package
 // File    : SpellingConfigurationFile.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 02/01/2015
+// Updated : 02/07/2015
 // Note    : Copyright 2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -41,8 +41,6 @@ namespace VisualStudio.SpellChecker.Configuration
         private PropertyDescriptorCollection configCache, csoCache;
         private SpellCheckerConfiguration defaultConfig;
 
-        private string filename;
-
         private XDocument document;
         private XElement root;
 
@@ -70,13 +68,51 @@ namespace VisualStudio.SpellChecker.Configuration
         }
 
         /// <summary>
-        /// This is used to return the global configuration filename
+        /// This is used to return the global configuration filename (VSSpellChecker.vsspell)
         /// </summary>
         public static string GlobalConfigurationFilename
         {
             get
             {
-                return Path.Combine(GlobalConfigurationFilePath, "VSSpellChecker.spelling");
+                return Path.Combine(GlobalConfigurationFilePath, "VSSpellChecker.vsspell");
+            }
+        }
+
+        /// <summary>
+        /// This property is used to get or set the filename
+        /// </summary>
+        public string Filename { get; set; }
+
+        /// <summary>
+        /// This read-only property returns the configuration file type
+        /// </summary>
+        /// <value>Configuration files are associated with filenames and the type is determined by examining the
+        /// filename.</value>
+        public ConfigurationType ConfigurationType
+        {
+            get
+            {
+                string filename = this.Filename;
+
+                if(String.IsNullOrWhiteSpace(filename))
+                    return ConfigurationType.File;
+
+                if(filename.Equals(GlobalConfigurationFilename))
+                    return ConfigurationType.Global;
+
+                string relatedFile = Path.GetFileNameWithoutExtension(filename),
+                    folder = Path.GetDirectoryName(filename);
+
+                if(folder.EndsWith(relatedFile, StringComparison.OrdinalIgnoreCase))
+                    return ConfigurationType.Folder;
+
+                if(relatedFile.EndsWith(".sln", StringComparison.OrdinalIgnoreCase))
+                    return ConfigurationType.Solution;
+
+                if(Path.GetExtension(relatedFile).EndsWith("proj", StringComparison.OrdinalIgnoreCase))
+                    return ConfigurationType.Project;
+
+                return ConfigurationType.File;
             }
         }
         #endregion
@@ -114,7 +150,7 @@ namespace VisualStudio.SpellChecker.Configuration
                 // Ignore exceptions
             }
 
-            this.filename = filename;
+            this.Filename = filename;
             this.defaultConfig = defaultConfig;
 
             if(File.Exists(filename))
@@ -132,8 +168,8 @@ namespace VisualStudio.SpellChecker.Configuration
                     AssemblyInfo.ConfigSchemaVersion));
 
                 document = new XDocument(new XComment(" Visual Studio Spell Checker configuration file - " +
-                    "[https://github.com/EWSoftware/VSSpellChecker]\r\n     Do not edit.  Use Tools | Spell " +
-                    "Checker | Edit Configuration to modify settings. "), root);
+                    "[https://github.com/EWSoftware/VSSpellChecker]\r\n     Do not edit.  Use the " +
+                    "configuration file editor to modify settings. "), root);
             }
         }
         #endregion
@@ -153,8 +189,8 @@ namespace VisualStudio.SpellChecker.Configuration
 
             // So far, there's only one old format
             document.AddFirst(new XComment(" Visual Studio Spell Checker configuration file - " +
-                "[https://github.com/EWSoftware/VSSpellChecker]\r\n     Do not edit.  Use Tools | Spell " +
-                "Checker | Edit Configuration to modify settings. "));
+                "[https://github.com/EWSoftware/VSSpellChecker]\r\n     Do not edit.  Use the " +
+                "configuration file editor to modify settings. "));
 
             root.Add(new XAttribute("Format", AssemblyInfo.ConfigSchemaVersion));
 
@@ -228,11 +264,6 @@ namespace VisualStudio.SpellChecker.Configuration
                 ignoredCharacterClass.Remove();
                 root.Add(new XElement(PropertyNames.IgnoreCharacterClass, ignoredCharacterClass.Value));
             }
-
-            // Change the filename to the default if it's the old name
-            if(Path.GetDirectoryName(filename) == GlobalConfigurationFilePath &&
-              Path.GetFileName(filename) == "SpellChecker.config")
-                filename = GlobalConfigurationFilename;
         }
 
         /// <summary>
@@ -506,7 +537,7 @@ namespace VisualStudio.SpellChecker.Configuration
 
             try
             {
-                document.Save(filename);
+                document.Save(this.Filename);
             }
             catch(Exception ex)
             {

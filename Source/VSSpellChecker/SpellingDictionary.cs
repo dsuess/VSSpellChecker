@@ -63,7 +63,7 @@ namespace VisualStudio.SpellChecker
         }
         #endregion
 
-        #region ISpellingDictionary Members
+        #region Spelling dictionary members
         //=====================================================================
 
         /// <summary>

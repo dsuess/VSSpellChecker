@@ -2,7 +2,7 @@
 // System  : Visual Studio Spell Checker Package
 // File    : XmlFilesUserControl.xaml.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 02/02/2015
+// Updated : 02/08/2015
 // Note    : Copyright 2014-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -18,6 +18,7 @@
 // 06/09/2014  EFW  Moved the XML files settings to a user control
 //===============================================================================================================
 
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -26,7 +27,7 @@ using System.Windows.Controls;
 
 using VisualStudio.SpellChecker.Configuration;
 
-namespace VisualStudio.SpellChecker.UI
+namespace VisualStudio.SpellChecker.Editors.Pages
 {
     /// <summary>
     /// This user control is used to edit the XML files spell checker configuration settings
@@ -67,12 +68,6 @@ namespace VisualStudio.SpellChecker.UI
         }
 
         /// <inheritdoc />
-        public bool IsValid
-        {
-            get { return true; }
-        }
-
-        /// <inheritdoc />
         public void LoadConfiguration(SpellingConfigurationFile configuration)
         {
             IEnumerable<string> words;
@@ -80,10 +75,24 @@ namespace VisualStudio.SpellChecker.UI
             lbIgnoredXmlElements.Items.Clear();
             lbSpellCheckedAttributes.Items.Clear();
 
-            if(configuration.HasProperty(PropertyNames.IgnoredXmlElements))
-                words = configuration.ToValues(PropertyNames.IgnoredXmlElements, PropertyNames.IgnoredXmlElementsItem);
+            if(configuration.ConfigurationType == ConfigurationType.Global)
+            {
+                chkInheritXmlSettings.IsChecked = false;
+                chkInheritXmlSettings.Visibility = Visibility.Collapsed;
+            }
             else
-                words = SpellCheckerConfiguration.DefaultIgnoredXmlElements;
+                chkInheritXmlSettings.IsChecked = configuration.ToBoolean(PropertyNames.InheritXmlSettings);
+
+            if(configuration.HasProperty(PropertyNames.IgnoredXmlElements))
+            {
+                words = configuration.ToValues(PropertyNames.IgnoredXmlElements,
+                    PropertyNames.IgnoredXmlElementsItem);
+            }
+            else
+                if(!chkInheritXmlSettings.IsChecked.Value && configuration.ConfigurationType == ConfigurationType.Global)
+                    words = SpellCheckerConfiguration.DefaultIgnoredXmlElements;
+                else
+                    words = Enumerable.Empty<string>();
 
             foreach(string el in words)
                 lbIgnoredXmlElements.Items.Add(el);
@@ -94,7 +103,10 @@ namespace VisualStudio.SpellChecker.UI
                     PropertyNames.SpellCheckedXmlAttributesItem);
             }
             else
-                words = SpellCheckerConfiguration.DefaultSpellCheckedAttributes;
+                if(!chkInheritXmlSettings.IsChecked.Value && configuration.ConfigurationType == ConfigurationType.Global)
+                    words = SpellCheckerConfiguration.DefaultSpellCheckedAttributes;
+                else
+                    words = Enumerable.Empty<string>();
 
             foreach(string el in words)
                 lbSpellCheckedAttributes.Items.Add(el);
@@ -106,28 +118,30 @@ namespace VisualStudio.SpellChecker.UI
         }
 
         /// <inheritdoc />
-        public bool SaveConfiguration(SpellingConfigurationFile configuration)
+        public void SaveConfiguration(SpellingConfigurationFile configuration)
         {
-            HashSet<string> newList = new HashSet<string>(lbIgnoredXmlElements.Items.OfType<string>()),
-                defaultList = new HashSet<string>(SpellCheckerConfiguration.DefaultIgnoredXmlElements);
+            HashSet<string> newElementList, newAttributeList;
 
-            if(defaultList.SetEquals(newList))
-                newList = null;
+            if(lbIgnoredXmlElements.Items.Count == 0 && chkInheritXmlSettings.IsChecked.Value)
+                newElementList = null;
+            else
+                newElementList = new HashSet<string>(lbIgnoredXmlElements.Items.OfType<string>());
 
+            if(lbSpellCheckedAttributes.Items.Count == 0 && chkInheritXmlSettings.IsChecked.Value)
+                newAttributeList = null;
+            else
+                newAttributeList = new HashSet<string>(lbSpellCheckedAttributes.Items.OfType<string>());
+
+            configuration.StoreProperty(PropertyNames.InheritXmlSettings, chkInheritXmlSettings.IsChecked);
             configuration.StoreValues(PropertyNames.IgnoredXmlElements, PropertyNames.IgnoredXmlElementsItem,
-                newList);
-
-            newList = new HashSet<string>(lbSpellCheckedAttributes.Items.OfType<string>());
-            defaultList = new HashSet<string>(SpellCheckerConfiguration.DefaultSpellCheckedAttributes);
-
-            if(defaultList.SetEquals(newList))
-                newList = null;
-
+                newElementList);
             configuration.StoreValues(PropertyNames.SpellCheckedXmlAttributes,
-                PropertyNames.SpellCheckedXmlAttributesItem, newList);
-
-            return true;
+                PropertyNames.SpellCheckedXmlAttributesItem, newAttributeList);
         }
+
+        /// <inheritdoc />
+        public event EventHandler ConfigurationChanged;
+
         #endregion
 
         #region Event handlers
@@ -145,20 +159,24 @@ namespace VisualStudio.SpellChecker.UI
             txtIgnoredElement.Text = txtIgnoredElement.Text.Trim();
 
             if(txtIgnoredElement.Text.Length != 0)
-            {
-                idx = lbIgnoredXmlElements.Items.IndexOf(txtIgnoredElement.Text);
-
-                if(idx == -1)
-                    idx = lbIgnoredXmlElements.Items.Add(txtIgnoredElement.Text);
-
-                if(idx != -1)
+                foreach(string word in txtIgnoredElement.Text.Split(new[] { ' ', '\t', ',', '.' },
+                  StringSplitOptions.RemoveEmptyEntries))
                 {
-                    lbIgnoredXmlElements.SelectedIndex = idx;
-                    lbIgnoredXmlElements.ScrollIntoView(lbIgnoredXmlElements.Items[idx]);
+                    idx = lbIgnoredXmlElements.Items.IndexOf(word);
+
+                    if(idx == -1)
+                        idx = lbIgnoredXmlElements.Items.Add(word);
+
+                    if(idx != -1)
+                    {
+                        lbIgnoredXmlElements.SelectedIndex = idx;
+                        lbIgnoredXmlElements.ScrollIntoView(lbIgnoredXmlElements.Items[idx]);
+                    }
+
+                    txtIgnoredElement.Text = null;
                 }
 
-                txtIgnoredElement.Text = null;
-            }
+            Property_Changed(sender, e);
         }
 
         /// <summary>
@@ -183,6 +201,8 @@ namespace VisualStudio.SpellChecker.UI
 
                 lbIgnoredXmlElements.SelectedIndex = idx;
             }
+
+            Property_Changed(sender, e);
         }
 
         /// <summary>
@@ -194,11 +214,14 @@ namespace VisualStudio.SpellChecker.UI
         {
             lbIgnoredXmlElements.Items.Clear();
 
-            foreach(string el in SpellCheckerConfiguration.DefaultIgnoredXmlElements)
-                lbIgnoredXmlElements.Items.Add(el);
+            if(!chkInheritXmlSettings.IsChecked.Value)
+                foreach(string el in SpellCheckerConfiguration.DefaultIgnoredXmlElements)
+                    lbIgnoredXmlElements.Items.Add(el);
 
             var sd = new SortDescription { Direction = ListSortDirection.Ascending };
             lbIgnoredXmlElements.Items.SortDescriptions.Add(sd);
+
+            Property_Changed(sender, e);
         }
 
         /// <summary>
@@ -213,20 +236,24 @@ namespace VisualStudio.SpellChecker.UI
             txtAttributeName.Text = txtAttributeName.Text.Trim();
 
             if(txtAttributeName.Text.Length != 0)
-            {
-                idx = lbSpellCheckedAttributes.Items.IndexOf(txtAttributeName.Text);
-
-                if(idx == -1)
-                    idx = lbSpellCheckedAttributes.Items.Add(txtAttributeName.Text);
-
-                if(idx != -1)
+                foreach(string word in txtAttributeName.Text.Split(new[] { ' ', '\t', ',', '.' },
+                  StringSplitOptions.RemoveEmptyEntries))
                 {
-                    lbSpellCheckedAttributes.SelectedIndex = idx;
-                    lbSpellCheckedAttributes.ScrollIntoView(lbSpellCheckedAttributes.Items[idx]);
+                    idx = lbSpellCheckedAttributes.Items.IndexOf(word);
+
+                    if(idx == -1)
+                        idx = lbSpellCheckedAttributes.Items.Add(word);
+
+                    if(idx != -1)
+                    {
+                        lbSpellCheckedAttributes.SelectedIndex = idx;
+                        lbSpellCheckedAttributes.ScrollIntoView(lbSpellCheckedAttributes.Items[idx]);
+                    }
+
+                    txtAttributeName.Text = null;
                 }
 
-                txtAttributeName.Text = null;
-            }
+            Property_Changed(sender, e);
         }
 
         /// <summary>
@@ -251,6 +278,8 @@ namespace VisualStudio.SpellChecker.UI
 
                 lbSpellCheckedAttributes.SelectedIndex = idx;
             }
+
+            Property_Changed(sender, e);
         }
 
         /// <summary>
@@ -262,11 +291,27 @@ namespace VisualStudio.SpellChecker.UI
         {
             lbSpellCheckedAttributes.Items.Clear();
 
-            foreach(string el in SpellCheckerConfiguration.DefaultSpellCheckedAttributes)
-                lbSpellCheckedAttributes.Items.Add(el);
+            if(!chkInheritXmlSettings.IsChecked.Value)
+                foreach(string el in SpellCheckerConfiguration.DefaultSpellCheckedAttributes)
+                    lbSpellCheckedAttributes.Items.Add(el);
 
             var sd = new SortDescription { Direction = ListSortDirection.Ascending };
             lbSpellCheckedAttributes.Items.SortDescriptions.Add(sd);
+
+            Property_Changed(sender, e);
+        }
+
+        /// <summary>
+        /// Notify the parent of property changes that affect the file's dirty state
+        /// </summary>
+        /// <param name="sender">The sender of the event</param>
+        /// <param name="e">The event arguments</param>
+        private void Property_Changed(object sender, System.Windows.RoutedEventArgs e)
+        {
+            var handler = ConfigurationChanged;
+
+            if(handler != null)
+                handler(this, EventArgs.Empty);
         }
         #endregion
     }
