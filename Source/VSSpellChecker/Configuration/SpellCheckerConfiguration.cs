@@ -2,7 +2,7 @@
 // System  : Visual Studio Spell Checker Package
 // File    : SpellCheckerConfiguration.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 02/07/2015
+// Updated : 02/09/2015
 // Note    : Copyright 2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -23,8 +23,6 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
 using System.IO;
-using System.Linq;
-using System.Text.RegularExpressions;
 
 namespace VisualStudio.SpellChecker.Configuration
 {
@@ -38,46 +36,12 @@ namespace VisualStudio.SpellChecker.Configuration
         #region Private data members
         //=====================================================================
 
-        private static Regex reSplitExtensions = new Regex(@"[^\.\w]");
-
-        private static SpellCheckerConfiguration globalConfiguration;
-
         private CSharpOptions csharpOptions;
-        private HashSet<string> ignoredWords, ignoredXmlElements, spellCheckedXmlAttributes, extensionExclusions;
+        private HashSet<string> ignoredWords, ignoredXmlElements, spellCheckedXmlAttributes, excludedExtensions;
         #endregion
 
         #region Properties
         //=====================================================================
-
-        /// <summary>
-        /// This read-only property returns the global configuration settings
-        /// </summary>
-        public static SpellCheckerConfiguration GlobalConfiguration
-        {
-            get
-            {
-                if(globalConfiguration == null)
-                {
-                    globalConfiguration = new SpellCheckerConfiguration();
-                    
-                    // Load user settings?
-                    if(File.Exists(SpellingConfigurationFile.GlobalConfigurationFilename))
-                        globalConfiguration.Load(SpellingConfigurationFile.GlobalConfigurationFilename);
-                    else
-                    {
-                        // See if the legacy configuration file exists.  If so, load it and convert it.
-                        string legacyConfig = Path.Combine(SpellingConfigurationFile.GlobalConfigurationFilePath,
-                            "SpellChecker.config");
-
-                        // If not found, we'll use the defaults
-                        if(File.Exists(legacyConfig))
-                            globalConfiguration.Load(legacyConfig);
-                    }
-                }
-
-                return globalConfiguration;
-            }
-        }
 
         /// <summary>
         /// This is used to get or set the default language for the spell checker
@@ -155,39 +119,21 @@ namespace VisualStudio.SpellChecker.Configuration
         }
 
         /// <summary>
-        /// This is used to get or set the exclusions by filename extension
+        /// This is used to indicate whether or not excluded extensions are inherited by other configurations
         /// </summary>
-        /// <remarks>Filenames with an extension in this set will not be spell checked.  Extensions are specified
-        /// in a space or comma-separated list with or without a preceding period.  A single period will exclude
-        /// files without an extension.</remarks>
-        [DefaultValue("")]
-        public string ExcludeByFilenameExtension
+        /// <value>The default is true so that sub-configurations inherit all excluded extensions from higher
+        /// level configurations.</value>
+        [DefaultValue(true)]
+        public bool InheritExcludedExtensions { get; set; }
+
+        /// <summary>
+        /// This read-only property returns an enumerable list of excluded filename extensions
+        /// </summary>
+        /// <remarks>Filenames with an extension in this set will not be spell checked.  An entry consisting of a
+        /// single period will exclude files without an extension.</remarks>
+        public IEnumerable<string> ExcludedExtensions
         {
-            get
-            {
-                return String.Join(" ", extensionExclusions.OrderBy(e => e));
-            }
-            set
-            {
-                if(extensionExclusions == null)
-                    extensionExclusions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                else
-                    extensionExclusions.Clear();
-
-                if(!String.IsNullOrWhiteSpace(value))
-                    foreach(string ext in reSplitExtensions.Split(value))
-                        if(!String.IsNullOrEmpty(ext))
-                        {
-                            string addExt;
-
-                            if(ext[0] != '.')
-                                addExt = "." + ext;
-                            else
-                                addExt = ext;
-
-                            extensionExclusions.Add(addExt);
-                        }
-            }
+            get { return excludedExtensions; }
         }
 
         /// <summary>
@@ -231,43 +177,6 @@ namespace VisualStudio.SpellChecker.Configuration
         public IEnumerable<string> SpellCheckedXmlAttributes
         {
             get { return spellCheckedXmlAttributes; }
-        }
-
-        /// <summary>
-        /// This read-only property returns a list of available dictionary languages
-        /// </summary>
-        /// <remarks>The returned enumerable list contains the default English (en-US) dictionary along with
-        /// any custom dictionaries found in the <see cref="ConfigurationFilePath"/> folder.</remarks>
-        public static IEnumerable<CultureInfo> AvailableDictionaryLanguages
-        {
-            get
-            {
-                CultureInfo info;
-
-                // This is supplied with the application and is always available
-                yield return new CultureInfo("en-US");
-
-                // Culture names can vary in format (en-US, arn, az-Cyrl, az-Cyrl-AZ, az-Latn, az-Latn-AZ, etc.)
-                // so look for any affix files with a related dictionary file and see if they are valid cultures.
-                // If so, we'll take them.
-                foreach(string dictionary in Directory.EnumerateFiles(
-                  SpellingConfigurationFile.GlobalConfigurationFilePath, "*.aff"))
-                    if(File.Exists(Path.ChangeExtension(dictionary, ".dic")))
-                    {
-                        try
-                        {
-                            info = new CultureInfo(Path.GetFileNameWithoutExtension(dictionary).Replace("_", "-"));
-                        }
-                        catch(CultureNotFoundException)
-                        {
-                            // Ignore filenames that are not cultures
-                            info = null;
-                        }
-
-                        if(info != null)
-                            yield return info;
-                    }
-            }
         }
 
         /// <summary>
@@ -329,7 +238,8 @@ namespace VisualStudio.SpellChecker.Configuration
 
             this.SpellCheckAsYouType = this.IgnoreWordsWithDigits = this.IgnoreWordsInAllUppercase =
                 this.IgnoreFormatSpecifiers = this.IgnoreFilenamesAndEMailAddresses =
-                this.IgnoreXmlElementsInText = this.InheritIgnoredWords = this.InheritXmlSettings = true;
+                this.IgnoreXmlElementsInText = this.InheritExcludedExtensions = this.InheritIgnoredWords =
+                this.InheritXmlSettings = true;
 
             this.TreatUnderscoreAsSeparator = false;
             this.IgnoreCharacterClass = IgnoredCharacterClass.None;
@@ -337,7 +247,7 @@ namespace VisualStudio.SpellChecker.Configuration
             ignoredWords = new HashSet<string>(DefaultIgnoredWords, StringComparer.OrdinalIgnoreCase);
             ignoredXmlElements = new HashSet<string>(DefaultIgnoredXmlElements);
             spellCheckedXmlAttributes = new HashSet<string>(DefaultSpellCheckedAttributes);
-            extensionExclusions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            excludedExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         }
         #endregion
 
@@ -357,7 +267,7 @@ namespace VisualStudio.SpellChecker.Configuration
             if(extension.Length == 0 || extension[0] != '.')
                 extension = "." + extension;
 
-            return extensionExclusions.Contains(extension);
+            return excludedExtensions.Contains(extension);
         }
 
         /// <summary>
@@ -381,13 +291,18 @@ namespace VisualStudio.SpellChecker.Configuration
         /// Load the configuration from the given file
         /// </summary>
         /// <param name="filename">The configuration file to load</param>
-        /// <remarks>Any properties not in the configuration file retain their current values</remarks>
+        /// <remarks>Any properties not in the configuration file retain their current values.  If the file does
+        /// not exist, the configuration will remain unchanged.</remarks>
         public void Load(string filename)
         {
             HashSet<string> tempHashSet;
 
             try
             {
+                // Nothing to do if the file doesn't exist
+                if(!File.Exists(filename))
+                    return;
+
                 var configuration = new SpellingConfigurationFile(filename, this);
 
                 this.DefaultLanguage = configuration.ToCultureInfo(PropertyNames.DefaultLanguage);
@@ -401,7 +316,6 @@ namespace VisualStudio.SpellChecker.Configuration
                 this.TreatUnderscoreAsSeparator = configuration.ToBoolean(PropertyNames.TreatUnderscoreAsSeparator);
                 this.IgnoreCharacterClass = configuration.ToEnum<IgnoredCharacterClass>(
                     PropertyNames.IgnoreCharacterClass);
-                this.ExcludeByFilenameExtension = configuration.ToString(PropertyNames.ExcludeByFilenameExtension);
 
                 csharpOptions.IgnoreXmlDocComments = configuration.ToBoolean(
                     PropertyNames.CSharpOptionsIgnoreXmlDocComments);
@@ -416,22 +330,58 @@ namespace VisualStudio.SpellChecker.Configuration
                 csharpOptions.IgnoreVerbatimStrings = configuration.ToBoolean(
                     PropertyNames.CSharpOptionsIgnoreVerbatimStrings);
 
+                this.InheritExcludedExtensions = configuration.ToBoolean(PropertyNames.InheritExcludedExtensions);
+
+                if(configuration.HasProperty(PropertyNames.ExcludedExtensions))
+                {
+                    tempHashSet = new HashSet<string>(configuration.ToValues(PropertyNames.ExcludedExtensions,
+                        PropertyNames.ExcludedExtensionsItem));
+
+                    if(this.InheritExcludedExtensions)
+                    {
+                        if(tempHashSet.Count != 0)
+                            foreach(string ext in tempHashSet)
+                                excludedExtensions.Add(ext);
+                    }
+                    else
+                        if(!excludedExtensions.SetEquals(tempHashSet))
+                            excludedExtensions = tempHashSet;
+                }
+
+                this.InheritIgnoredWords = configuration.ToBoolean(PropertyNames.InheritIgnoredWords);
+
                 if(configuration.HasProperty(PropertyNames.IgnoredWords))
                 {
                     tempHashSet = new HashSet<string>(configuration.ToValues(PropertyNames.IgnoredWords,
                         PropertyNames.IgnoredWordsItem));
 
-                    if(!ignoredWords.SetEquals(tempHashSet))
-                        ignoredWords = tempHashSet;
+                    if(this.InheritIgnoredWords)
+                    {
+                        if(tempHashSet.Count != 0)
+                            foreach(string word in tempHashSet)
+                                ignoredWords.Add(word);
+                    }
+                    else
+                        if(!ignoredWords.SetEquals(tempHashSet))
+                            ignoredWords = tempHashSet;
                 }
+
+                this.InheritXmlSettings = configuration.ToBoolean(PropertyNames.InheritXmlSettings);
 
                 if(configuration.HasProperty(PropertyNames.IgnoredXmlElements))
                 {
                     tempHashSet = new HashSet<string>(configuration.ToValues(PropertyNames.IgnoredXmlElements,
                         PropertyNames.IgnoredXmlElementsItem));
 
-                    if(!ignoredXmlElements.SetEquals(tempHashSet))
-                        ignoredXmlElements = tempHashSet;
+                    if(this.InheritXmlSettings)
+                    {
+                        if(tempHashSet.Count != 0)
+                            foreach(string element in tempHashSet)
+                                ignoredXmlElements.Add(element);
+                    }
+                    else
+                        if(!ignoredXmlElements.SetEquals(tempHashSet))
+                            ignoredXmlElements = tempHashSet;
                 }
 
                 if(configuration.HasProperty(PropertyNames.SpellCheckedXmlAttributes))
@@ -439,8 +389,15 @@ namespace VisualStudio.SpellChecker.Configuration
                     tempHashSet = new HashSet<string>(configuration.ToValues(PropertyNames.SpellCheckedXmlAttributes,
                         PropertyNames.SpellCheckedXmlAttributesItem));
 
-                    if(!spellCheckedXmlAttributes.SetEquals(tempHashSet))
-                        spellCheckedXmlAttributes = tempHashSet;
+                    if(this.InheritXmlSettings)
+                    {
+                        if(tempHashSet.Count != 0)
+                            foreach(string attr in tempHashSet)
+                                spellCheckedXmlAttributes.Add(attr);
+                    }
+                    else
+                        if(!spellCheckedXmlAttributes.SetEquals(tempHashSet))
+                            spellCheckedXmlAttributes = tempHashSet;
                 }
             }
             catch(Exception ex)

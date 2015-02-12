@@ -29,8 +29,6 @@ using System.Linq;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Tagging;
 
-using VisualStudio.SpellChecker.Tagging;
-
 namespace VisualStudio.SpellChecker.Tagging.CSharp
 {
     /// <summary>

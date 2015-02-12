@@ -62,7 +62,7 @@ namespace VisualStudio.SpellChecker.Editors.Pages
         /// <inheritdoc />
         public string HelpUrl
         {
-            get { return this.Title; }
+            get { return this.Title.Replace(" ", "-"); }
         }
 
         /// <inheritdoc />
@@ -95,12 +95,31 @@ namespace VisualStudio.SpellChecker.Editors.Pages
             cboTreatUnderscoresAsSeparators.SelectedValue = configuration.ToPropertyState(
                 PropertyNames.TreatUnderscoreAsSeparator);
 
-            chkInheritExcludeByExt.Visibility = (configuration.ConfigurationType != ConfigurationType.Global) ?
-                Visibility.Visible : Visibility.Collapsed;
-            chkInheritExcludeByExt.IsChecked = !configuration.HasProperty(PropertyNames.ExcludeByFilenameExtension);
+            if(configuration.ConfigurationType != ConfigurationType.Global)
+                rbInheritIgnoredCharClass.Visibility = Visibility.Visible;
+            else
+                rbInheritIgnoredCharClass.Visibility = Visibility.Collapsed;
 
-            if(!chkInheritExcludeByExt.IsChecked.Value)
-                txtExcludeByExtension.Text = configuration.ToString(PropertyNames.ExcludeByFilenameExtension);
+            if(!configuration.HasProperty(PropertyNames.IgnoreCharacterClass) &&
+              configuration.ConfigurationType != ConfigurationType.Global)
+            {
+                rbInheritIgnoredCharClass.IsChecked = true;
+            }
+            else
+                switch(configuration.ToEnum<IgnoredCharacterClass>(PropertyNames.IgnoreCharacterClass))
+                {
+                    case IgnoredCharacterClass.NonAscii:
+                        rbIgnoreNonAscii.IsChecked = true;
+                        break;
+
+                    case IgnoredCharacterClass.NonLatin:
+                        rbIgnoreNonLatin.IsChecked = true;
+                        break;
+
+                    default:
+                        rbIncludeAll.IsChecked = true;
+                        break;
+                }
         }
 
         /// <inheritdoc />
@@ -121,10 +140,12 @@ namespace VisualStudio.SpellChecker.Editors.Pages
             configuration.StoreProperty(PropertyNames.TreatUnderscoreAsSeparator,
                 ((PropertyState)cboTreatUnderscoresAsSeparators.SelectedValue).ToPropertyValue());
 
-            // If not inherited, write it out even if blank.  We may want to turn the filter off lower down in
-            // the chain (i.e. exclude globally but not in a specific solution or project).
-            configuration.StoreProperty(PropertyNames.ExcludeByFilenameExtension,
-                chkInheritExcludeByExt.IsChecked.Value ? null : txtExcludeByExtension.Text.Trim());
+            if(rbInheritIgnoredCharClass.IsChecked.Value)
+                configuration.StoreProperty(PropertyNames.IgnoreCharacterClass, null);
+            else
+                configuration.StoreProperty(PropertyNames.IgnoreCharacterClass,
+                    rbIncludeAll.IsChecked.Value ? IgnoredCharacterClass.None : rbIgnoreNonLatin.IsChecked.Value ?
+                        IgnoredCharacterClass.NonLatin : IgnoredCharacterClass.NonAscii);
         }
 
         /// <inheritdoc />
@@ -134,17 +155,6 @@ namespace VisualStudio.SpellChecker.Editors.Pages
 
         #region Event handlers
         //=====================================================================
-
-        /// <summary>
-        /// Enable or disable the excluded extensions checkbox base on the Inherited checkbox state
-        /// </summary>
-        /// <param name="sender">The sender of the event</param>
-        /// <param name="e">The event arguments</param>
-        private void chkInheritExcludeByExt_CheckedChanged(object sender, System.Windows.RoutedEventArgs e)
-        {
-            txtExcludeByExtension.IsEnabled = !chkInheritExcludeByExt.IsChecked.Value;
-            Property_Changed(sender, e);
-        }
 
         /// <summary>
         /// Notify the parent of property changes that affect the file's dirty state

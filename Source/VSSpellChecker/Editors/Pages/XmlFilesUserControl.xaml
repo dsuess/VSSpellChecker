@@ -29,7 +29,7 @@
 				</Grid.RowDefinitions>
 				<StackPanel Orientation="Horizontal" Grid.Row="0" Margin="3">
 					<TextBox Name="txtIgnoredElement" Width="170" Margin="0, 0, 3, 0" />
-					<Button Name="btnAddElement" Content="Add" Width="50" ToolTip="Add new ignored XML element"
+					<Button Name="btnAddElement" Content="Add" Width="50" ToolTip="Add new ignored XML element(s)"
 										Click="btnAddElement_Click" />
 				</StackPanel>
 				<ListBox Name="lbIgnoredXmlElements" Grid.Row="1" Margin="3" />
@@ -50,7 +50,7 @@
 				</Grid.RowDefinitions>
 				<StackPanel Orientation="Horizontal" Grid.Row="0" Margin="3">
 					<TextBox Name="txtAttributeName" Width="170" Margin="0, 0, 3, 0" />
-					<Button Name="btnAddAttribute" Content="Add" Width="50" ToolTip="Add new spell checked XML attribute"
+					<Button Name="btnAddAttribute" Content="Add" Width="50" ToolTip="Add new spell checked XML attribute(s)"
 										Click="btnAddAttribute_Click" />
 				</StackPanel>
 				<ListBox Name="lbSpellCheckedAttributes" Grid.Row="1" Margin="3" />

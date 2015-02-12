@@ -2,7 +2,7 @@
 // System  : Visual Studio Spell Checker Package
 // File    : SpellingServiceFactory.cs
 // Authors : Noah Richards, Roman Golovin, Michael Lehenbauer, Eric Woodruff
-// Updated : 02/04/2015
+// Updated : 02/09/2015
 // Note    : Copyright 2010-2015, Microsoft Corporation, All rights reserved
 //           Portions Copyright 2013-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
@@ -23,8 +23,12 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
+using System.IO;
 
+using EnvDTE;
+using EnvDTE80;
 using Microsoft.VisualStudio;
+using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.TextManager.Interop;
@@ -42,7 +46,12 @@ namespace VisualStudio.SpellChecker
         #region Private data members
         //=====================================================================
 
+        // This serves as a flag indicating that a file is not to be spell checked.  It saves storing the
+        // entire configuration as a property when spell checking is not wanted.
         private const string SpellCheckerDisabledKey = "@@VisualStudio.SpellChecker.Disabled";
+
+        [Import]
+        private SVsServiceProvider globalServiceProvider = null;
 
         #endregion
 
@@ -64,9 +73,8 @@ namespace VisualStudio.SpellChecker
             if(buffer != null && !buffer.Properties.TryGetProperty(SpellCheckerDisabledKey, out isDisabled) &&
               !buffer.Properties.TryGetProperty(typeof(SpellCheckerConfiguration), out config))
             {
-                // TODO: Generate the configuration settings for the file.  For now, all we have are the global
-                // settings.
-                config = SpellCheckerConfiguration.GlobalConfiguration;
+                // Generate the configuration settings unique to the file
+                config = this.GenerateConfiguration(buffer);
 
                 if(!config.SpellCheckAsYouType || config.IsExcludedByExtension(buffer.GetFilenameExtension()))
                 {
@@ -116,33 +124,110 @@ namespace VisualStudio.SpellChecker
         //=====================================================================
 
         /// <summary>
-        /// Get the filename for the given text buffer
+        /// Generate the configuration to use when spell checking the given text buffer
         /// </summary>
-        /// <param name="buffer">The text buffer for which to obtain the filename</param>
-        /// <returns>The filename if obtained, null if not</returns>
-        private static string GetFileNameFromTextBuffer(ITextBuffer buffer)
+        /// <param name="buffer">The text buffer for which to generate a configuration</param>
+        /// <returns>The generated configuration to use</returns>
+        /// <remarks>The configuration is a merger of the global settings plus any solution, project, folder, and
+        /// file settings related to the text buffer.</remarks>
+        private SpellCheckerConfiguration GenerateConfiguration(ITextBuffer buffer)
         {
-            IVsTextBuffer adapter;
-            string filename = null;
-            uint formatIndex;
+            ProjectItem projectItem, fileItem;
+            string filename, projectPath;
 
-            if(buffer.Properties.TryGetProperty(typeof(IVsTextBuffer), out adapter))
+            // Start with the global configuration
+            var config = new SpellCheckerConfiguration();
+
+            try
             {
-                IPersistFileFormat pff = adapter as IPersistFileFormat;
+                config.Load(SpellingConfigurationFile.GlobalConfigurationFilename);
 
-                if(pff != null)
-                    try
+                var dte2 = (globalServiceProvider == null) ? null :
+                    globalServiceProvider.GetService(typeof(SDTE)) as DTE2;
+
+                if(dte2 != null && dte2.Solution != null && !String.IsNullOrWhiteSpace(dte2.Solution.FullName))
+                {
+                    var solution = dte2.Solution;
+
+                    // See if there is a solution configuration
+                    filename = solution.FullName + ".vsspell";
+                    projectItem = solution.FindProjectItem(filename);
+
+                    if(projectItem != null)
+                        config.Load(filename);
+
+                    // Find the project item for the file we are opening
+                    filename = buffer.GetFilename();
+                    projectItem = solution.FindProjectItem(filename);
+
+                    if(projectItem != null)
                     {
-                        if(pff.GetCurFile(out filename, out formatIndex) != VSConstants.S_OK)
-                            filename = null;
+                        fileItem = projectItem;
+
+                        // If we have a project (we should), see if it has settings
+                        if(projectItem.ContainingProject != null)
+                        {
+                            filename = projectItem.ContainingProject.FullName + ".vsspell";
+                            projectItem = solution.FindProjectItem(filename);
+
+                            if(projectItem != null)
+                                config.Load(filename);
+
+                            // Get the full path based on the project.  The buffer filename will refer to the actual
+                            // path which may be to a linked file outside the project's folder structure.
+                            projectPath = Path.GetDirectoryName(filename);
+                            filename = Path.GetDirectoryName((string)fileItem.Properties.Item("FullPath").Value);
+
+                            // Search for folder-specific configuration files
+                            if(filename.StartsWith(projectPath, StringComparison.OrdinalIgnoreCase))
+                            {
+                                // Then check subfolders.  No need to check the root folder as the project
+                                // settings cover it.
+                                if(filename.Length > projectPath.Length)
+                                    foreach(string folder in filename.Substring(projectPath.Length + 1).Split('\\'))
+                                    {
+                                        projectPath = Path.Combine(projectPath, folder);
+                                        filename = Path.Combine(projectPath, folder + ".vsspell");
+                                        projectItem = solution.FindProjectItem(filename);
+
+                                        if(projectItem != null)
+                                            config.Load(filename);
+                                    }
+                            }
+
+                            // If the item looks like a dependent file item, look for a settings file related to
+                            // the parent file item.
+                            if(fileItem.Collection != null && fileItem.Collection.Parent != null)
+                            {
+                                projectItem = fileItem.Collection.Parent as ProjectItem;
+
+                                if(projectItem != null && projectItem.Kind == EnvDTE.Constants.vsProjectItemKindPhysicalFile)
+                                {
+                                    filename = (string)projectItem.Properties.Item("FullPath").Value + ".vsspell";
+                                    projectItem = solution.FindProjectItem(filename);
+
+                                    if(projectItem != null)
+                                        config.Load(filename);
+                                }
+                            }
+
+                            // And finally, look for file-specific settings for the item itself
+                            filename = (string)fileItem.Properties.Item("FullPath").Value + ".vsspell";
+                            projectItem = solution.FindProjectItem(filename);
+
+                            if(projectItem != null)
+                                config.Load(filename);
+                        }
                     }
-                    catch
-                    {
-                        // Ignore exceptions, we just won't return a filename
-                    }
+                }
+            }
+            catch(Exception ex)
+            {
+                // Ignore errors, we just won't load the configurations after the point of failure
+                System.Diagnostics.Debug.WriteLine(ex);
             }
 
-            return filename;
+            return config;
         }
         #endregion
     }

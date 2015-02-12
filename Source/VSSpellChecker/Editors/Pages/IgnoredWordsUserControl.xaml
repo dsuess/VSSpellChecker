@@ -18,8 +18,8 @@
 as suggestions for other misspelled words.  This is useful for excluding things such as abbreviations,
 programming terms, etc.<LineBreak/><LineBreak/>
 Escaped words are a special class of ignored words.  These are words that start with what looks like a valid
-escape sequence (\a, \t, etc.) but the remainder of the word should not appear as a misspelled word.  The default
-set includes common Doxygen tags that fit this category.</TextBlock>
+escape sequence (\a \b \f \n \r \t \v \x \u \U) but the remainder of the word should not appear as a misspelled
+word.  The default set includes common Doxygen tags that fit this category.</TextBlock>
 			<CheckBox Name="chkInheritIgnoredWords" Grid.Row="1" Margin="3" Checked="Property_Changed"
 				Unchecked="Property_Changed">
 				<TextBlock TextWrapping="Wrap">
@@ -28,7 +28,7 @@ set includes common Doxygen tags that fit this category.</TextBlock>
 			</CheckBox>
 			<StackPanel Orientation="Horizontal" Grid.Row="2" Margin="3">
 				<TextBox Name="txtIgnoredWord" Width="250" Margin="0, 0, 3, 0" />
-				<Button Name="btnAddIgnoredWord" Content="Add" Width="50" ToolTip="Add new ignored word"
+				<Button Name="btnAddIgnoredWord" Content="Add" Width="50" ToolTip="Add new ignored word(s)"
 									Click="btnAddIgnoredWord_Click" />
 			</StackPanel>
 			<ListBox Name="lbIgnoredWords" Grid.Row="3" Margin="3" />

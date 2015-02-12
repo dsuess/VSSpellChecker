@@ -2,7 +2,7 @@
 // System  : Visual Studio Spell Checker Package
 // File    : XmlFilesUserControl.xaml.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 02/08/2015
+// Updated : 02/10/2015
 // Note    : Copyright 2014-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -64,7 +64,7 @@ namespace VisualStudio.SpellChecker.Editors.Pages
         /// <inheritdoc />
         public string HelpUrl
         {
-            get { return "XML-Files"; }
+            get { return this.Title.Replace(" ", "-"); }
         }
 
         /// <inheritdoc />
@@ -120,19 +120,29 @@ namespace VisualStudio.SpellChecker.Editors.Pages
         /// <inheritdoc />
         public void SaveConfiguration(SpellingConfigurationFile configuration)
         {
-            HashSet<string> newElementList, newAttributeList;
+            HashSet<string> newElementList = null, newAttributeList = null;
 
-            if(lbIgnoredXmlElements.Items.Count == 0 && chkInheritXmlSettings.IsChecked.Value)
-                newElementList = null;
-            else
+            if(lbIgnoredXmlElements.Items.Count != 0 || !chkInheritXmlSettings.IsChecked.Value)
+            {
                 newElementList = new HashSet<string>(lbIgnoredXmlElements.Items.OfType<string>());
 
-            if(lbSpellCheckedAttributes.Items.Count == 0 && chkInheritXmlSettings.IsChecked.Value)
-                newAttributeList = null;
-            else
+                if(configuration.ConfigurationType == ConfigurationType.Global &&
+                  newElementList.SetEquals(SpellCheckerConfiguration.DefaultIgnoredXmlElements))
+                    newElementList = null;
+            }
+
+            if(lbSpellCheckedAttributes.Items.Count != 0 || !chkInheritXmlSettings.IsChecked.Value)
+            {
                 newAttributeList = new HashSet<string>(lbSpellCheckedAttributes.Items.OfType<string>());
 
-            configuration.StoreProperty(PropertyNames.InheritXmlSettings, chkInheritXmlSettings.IsChecked);
+                if(configuration.ConfigurationType == ConfigurationType.Global &&
+                  newAttributeList.SetEquals(SpellCheckerConfiguration.DefaultSpellCheckedAttributes))
+                    newAttributeList = null;
+            }
+
+            if(configuration.ConfigurationType != ConfigurationType.Global)
+                configuration.StoreProperty(PropertyNames.InheritXmlSettings, chkInheritXmlSettings.IsChecked);
+
             configuration.StoreValues(PropertyNames.IgnoredXmlElements, PropertyNames.IgnoredXmlElementsItem,
                 newElementList);
             configuration.StoreValues(PropertyNames.SpellCheckedXmlAttributes,

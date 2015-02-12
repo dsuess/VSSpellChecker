@@ -2,7 +2,7 @@
 // System  : Visual Studio Spell Checker Package
 // File    : PropertyNames.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 02/01/2015
+// Updated : 02/08/2015
 // Note    : Copyright 2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -74,11 +74,6 @@ namespace VisualStudio.SpellChecker.Configuration
         public const string IgnoreCharacterClass = "IgnoreCharacterClass";
 
         /// <summary>
-        /// Exclude by filename extension
-        /// </summary>
-        public const string ExcludeByFilenameExtension = "ExcludeByFilenameExtension";
-
-        /// <summary>
         /// C# - Ignore XML doc comments
         /// </summary>
         public const string CSharpOptionsIgnoreXmlDocComments = "CSharpOptions.IgnoreXmlDocComments";
@@ -107,6 +102,21 @@ namespace VisualStudio.SpellChecker.Configuration
         /// C# - Ignore verbatim strings
         /// </summary>
         public const string CSharpOptionsIgnoreVerbatimStrings = "CSharpOptions.IgnoreVerbatimStrings";
+
+        /// <summary>
+        /// Inherit excluded extensions
+        /// </summary>
+        public const string InheritExcludedExtensions = "InheritExcludedExtensions";
+
+        /// <summary>
+        /// Excluded filename extensions list
+        /// </summary>
+        public const string ExcludedExtensions = "ExcludedExtension";
+
+        /// <summary>
+        /// Excluded filename extensions list item
+        /// </summary>
+        public const string ExcludedExtensionsItem = "Exclude";
 
         /// <summary>
         /// Inherit ignored words

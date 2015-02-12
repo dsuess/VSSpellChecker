@@ -2,7 +2,7 @@
 // System  : Visual Studio Spell Checker Package
 // File    : VSSpellCheckerPackage.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 02/07/2015
+// Updated : 02/10/2015
 // Note    : Copyright 2013-2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -58,7 +58,8 @@ namespace VisualStudio.SpellChecker
       Orientation = ToolWindowOrientation.Right, Style = VsDockStyle.Float, MultiInstances = false,
       Transient = false, PositionX = 100, PositionY = 100, Width = 300, Height = 300)]
     // This attribute lets the shell know we provide a spelling configuration file editor
-    [ProvideEditorFactory(typeof(SpellingConfigurationEditorFactory), 112)]
+    [ProvideEditorFactory(typeof(SpellingConfigurationEditorFactory), 112,
+      TrustLevel = __VSEDITORTRUSTLEVEL.ETL_AlwaysTrusted)]
     [ProvideEditorExtension(typeof(SpellingConfigurationEditorFactory), ".vsspell", 50)]
     // Provide a binding path for finding custom assemblies in this package
     [ProvideBindingPath()]
@@ -165,7 +166,7 @@ namespace VisualStudio.SpellChecker
         //=====================================================================
 
         /// <summary>
-        /// This is used to show the configuration dialog
+        /// This is used to edit the global configuration file
         /// </summary>
         /// <param name="sender">The sender of the event</param>
         /// <param name="e">The event arguments</param>
@@ -173,26 +174,34 @@ namespace VisualStudio.SpellChecker
         {
             string configFile = SpellingConfigurationFile.GlobalConfigurationFilename;
 
+            // Convert the legacy configuration?
+            if(Path.GetFileName(configFile).Equals("SpellChecker.config"))
+            {
+                string newConfigFile = Path.Combine(SpellingConfigurationFile.GlobalConfigurationFilePath,
+                    "VSSpellChecker.vsspell");
+
+                File.Copy(configFile, newConfigFile, true);
+                File.Delete(configFile);
+
+                configFile = newConfigFile;
+            }
+
+            // If it doesn't exist, create an empty file so that the editor can find it
             if(!File.Exists(configFile))
             {
-                // See if the legacy configuration file exists.  If so, copy it to the new global filename.
-                // The settings will be converted when loaded.
-                string legacyConfigFile = Path.Combine(SpellingConfigurationFile.GlobalConfigurationFilePath,
-                    "SpellChecker.config");
-
-                // If not found, we'll use the defaults
-                if(File.Exists(legacyConfigFile))
-                {
-                    File.Copy(legacyConfigFile, configFile, true);
-                    File.Delete(legacyConfigFile);
-                }
+                var file = new SpellingConfigurationFile(configFile, null);
+                file.Save();
             }
 
             var dte = Utility.GetServiceFromPackage<DTE, SDTE>(true);
-            var doc = dte.ItemOperations.OpenFile(configFile, EnvDTE.Constants.vsViewKindPrimary);
 
-            if(doc != null)
-                doc.Activate();
+            if(dte != null)
+            {
+                var doc = dte.ItemOperations.OpenFile(configFile, EnvDTE.Constants.vsViewKindPrimary);
+
+                if(doc != null)
+                    doc.Activate();
+            }
         }
 
         /// <summary>
@@ -323,6 +332,8 @@ namespace VisualStudio.SpellChecker
         private static bool DetermineContainingProjectAndSettingsFile(out Project containingProject,
           out string settingsFilename)
         {
+            string folderName = null;
+
             containingProject = null;
             settingsFilename = null;
 
@@ -343,7 +354,7 @@ namespace VisualStudio.SpellChecker
 
                 if(fullPath != null && fullPath.Value != null)
                 {
-                    string path = fullPath.Value.ToString();
+                    string path = (string)fullPath.Value;
 
                     if(!String.IsNullOrWhiteSpace(path))
                     {
@@ -372,7 +383,7 @@ namespace VisualStudio.SpellChecker
 
                         if(fullPath != null && fullPath.Value != null)
                         {
-                            string path = fullPath.Value.ToString();
+                            string path = (string)fullPath.Value;
 
                             if(!String.IsNullOrWhiteSpace(path))
                             {
@@ -381,7 +392,10 @@ namespace VisualStudio.SpellChecker
                                 // Folder items have a trailing backslash.  We'll put the configuration file in
                                 // the folder using its name as the filename.
                                 if(path[path.Length - 1] == '\\')
+                                {
+                                    folderName = path;
                                     settingsFilename = path + item.Name;
+                                }
                                 else
                                     settingsFilename = path;
                             }
@@ -389,7 +403,43 @@ namespace VisualStudio.SpellChecker
                     }
 
             if(settingsFilename != null)
-                settingsFilename += ".vsspell";
+            {
+                if(settingsFilename.EndsWith(".vsspell", StringComparison.OrdinalIgnoreCase) ||
+                 ((folderName == null && !File.Exists(settingsFilename)) ||
+                 (folderName != null && !Directory.Exists(folderName))))
+                {
+                    settingsFilename = null;
+                }
+                else
+                    if(folderName == null)
+                    {
+                        // Since we can't create an exhaustive list of file types that we cannot spell check,
+                        // take a peek at the first 1024 bytes.  If it looks like a binary file, ignore it.
+                        // Quick and dirty but mostly effective.
+                        try
+                        {
+                            using(StreamReader sr = new StreamReader(settingsFilename, true))
+                            {
+                                var fileChars = new char[1024];
+                                var validChars = new[] { '\b', '\t', '\r', '\n', '\x07', '\x0B', '\x0C' };
+
+                                // Note the length as it may be less than the maximum
+                                int length = sr.Read(fileChars, 0, fileChars.Length);
+
+                                if(fileChars.Take(length).Any(c => c < 32 && !validChars.Contains(c)))
+                                    settingsFilename = null;
+                                else
+                                    settingsFilename += ".vsspell";
+                            }
+                        }
+                        catch(Exception ex)
+                        {
+                            // Ignore errors, just don't offer to add a settings file
+                            settingsFilename = null;
+                            System.Diagnostics.Debug.WriteLine(ex);
+                        }
+                    }
+            }
 
             return (settingsFilename != null);
         }

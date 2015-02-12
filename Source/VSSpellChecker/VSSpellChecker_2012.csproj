@@ -47,11 +47,20 @@
     </CopyVsixExtensionLocation>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Configuration\ConfigurationType.cs" />
     <Compile Include="Configuration\CSharpOptions.cs" />
+    <Compile Include="Configuration\SpellCheckerDictionary.cs" />
     <Compile Include="Configuration\PropertyNames.cs" />
     <Compile Include="Configuration\SpellingConfigurationFile.cs" />
     <Compile Include="Editors\CommandTargetArguments.cs" />
     <Compile Include="Editors\ICommonCommandSupport.cs" />
+    <Compile Include="Editors\Pages\ExcludedExtensionsUserControl.xaml.cs">
+      <DependentUpon>ExcludedExtensionsUserControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Editors\Pages\FileInfoUserControl.xaml.cs">
+      <DependentUpon>FileInfoUserControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Editors\PropertyState.cs" />
     <Compile Include="Editors\SimpleEditorFactory.cs" />
     <Compile Include="Editors\SimpleEditorPane.cs" />
     <Compile Include="Editors\SpellingConfigurationEditorControl.xaml.cs">
@@ -275,6 +284,14 @@
     </COMReference>
   </ItemGroup>
   <ItemGroup>
+    <Page Include="Editors\Pages\ExcludedExtensionsUserControl.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Editors\Pages\FileInfoUserControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Editors\SpellingConfigurationEditorControl.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>

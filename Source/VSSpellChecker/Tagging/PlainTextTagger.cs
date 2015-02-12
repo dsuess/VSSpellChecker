@@ -29,10 +29,6 @@ using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Tagging;
 using Microsoft.VisualStudio.Utilities;
 
-using VisualStudio.SpellChecker;
-using VisualStudio.SpellChecker.Configuration;
-using VisualStudio.SpellChecker.Tagging;
-
 namespace VisualStudio.SpellChecker.Tagging
 {
     /// <summary>

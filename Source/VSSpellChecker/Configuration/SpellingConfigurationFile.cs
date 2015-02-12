@@ -2,7 +2,7 @@
 // System  : Visual Studio Spell Checker Package
 // File    : SpellingConfigurationFile.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 02/07/2015
+// Updated : 02/10/2015
 // Note    : Copyright 2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
@@ -70,10 +70,17 @@ namespace VisualStudio.SpellChecker.Configuration
         /// <summary>
         /// This is used to return the global configuration filename (VSSpellChecker.vsspell)
         /// </summary>
+        /// <value>If the legacy configuration file exists, its name will be returned instead.  It will be
+        /// converted and removed the next time it is opened for editing.</value>
         public static string GlobalConfigurationFilename
         {
             get
             {
+                string legacyConfig = Path.Combine(GlobalConfigurationFilePath, "SpellChecker.config");
+
+                if(File.Exists(legacyConfig))
+                    return legacyConfig;
+
                 return Path.Combine(GlobalConfigurationFilePath, "VSSpellChecker.vsspell");
             }
         }
@@ -168,8 +175,8 @@ namespace VisualStudio.SpellChecker.Configuration
                     AssemblyInfo.ConfigSchemaVersion));
 
                 document = new XDocument(new XComment(" Visual Studio Spell Checker configuration file - " +
-                    "[https://github.com/EWSoftware/VSSpellChecker]\r\n     Do not edit.  Use the " +
-                    "configuration file editor to modify settings. "), root);
+                    "[https://github.com/EWSoftware/VSSpellChecker]\r\n     Do not edit the XML.  Use the " +
+                    "configuration file editor in Visual Studio to modify the settings. "), root);
             }
         }
         #endregion
@@ -189,8 +196,8 @@ namespace VisualStudio.SpellChecker.Configuration
 
             // So far, there's only one old format
             document.AddFirst(new XComment(" Visual Studio Spell Checker configuration file - " +
-                "[https://github.com/EWSoftware/VSSpellChecker]\r\n     Do not edit.  Use the " +
-                "configuration file editor to modify settings. "));
+                "[https://github.com/EWSoftware/VSSpellChecker]\r\n     Do not edit the XML.  Use the " +
+                "configuration file editor in Visual Studio to modify the settings. "));
 
             root.Add(new XAttribute("Format", AssemblyInfo.ConfigSchemaVersion));
 
@@ -199,7 +206,7 @@ namespace VisualStudio.SpellChecker.Configuration
             {
                 var property = root.Element(name);
 
-                if(property != null)
+                if(property != null && String.IsNullOrWhiteSpace(property.Value))
                     property.Value = "True";
             }
 
@@ -263,6 +270,35 @@ namespace VisualStudio.SpellChecker.Configuration
             {
                 ignoredCharacterClass.Remove();
                 root.Add(new XElement(PropertyNames.IgnoreCharacterClass, ignoredCharacterClass.Value));
+            }
+
+            // Convert excluded extensions to a list
+            var excludeExts = root.Element("ExcludeByFilenameExtension");
+
+            if(excludeExts != null)
+            {
+                excludeExts.Remove();
+
+                string excluded = excludeExts.Value;
+
+                if(!String.IsNullOrWhiteSpace(excluded))
+                {
+                    excludeExts = new XElement(PropertyNames.ExcludedExtensions);
+                    root.Add(excludeExts);
+
+                    foreach(string ext in excluded.Split(new[] { ',', ' ', '\t', '\r', '\n' },
+                      StringSplitOptions.RemoveEmptyEntries))
+                    {
+                        string addExt;
+
+                        if(ext[0] != '.')
+                            addExt = "." + ext;
+                        else
+                            addExt = ext;
+
+                        excludeExts.Add(new XElement(PropertyNames.ExcludedExtensionsItem, addExt));
+                    }
+                }
             }
         }
 

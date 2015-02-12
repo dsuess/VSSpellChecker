@@ -4,7 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              mc:Ignorable="d"
-						 d:DesignHeight="430" d:DesignWidth="500">
+						 d:DesignHeight="400" d:DesignWidth="500">
 	<Grid>
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto" />
@@ -40,21 +40,27 @@
 					<ComboBox Name="cboTreatUnderscoresAsSeparators" Width="75" Margin="3" SelectionChanged="Property_Changed" />
 					<Label Margin="3" Content="_Treat underscores as separators" />
 				</StackPanel>
-				<TextBlock Margin="3, 10, 3, 3" TextWrapping="WrapWithOverflow">To set the spelling tag underline
-color, select <Bold>Tools | Options | Environment | Fonts and Colors</Bold> and select the <Bold>Spelling Error</Bold>
-display item.</TextBlock>
 			</StackPanel>
 		</GroupBox>
-		<GroupBox Header="_Exclude by Filename Extension" Grid.Row="1">
-			<StackPanel Margin="3" Orientation="Vertical">
-				<CheckBox Name="chkInheritExcludeByExt" Content="Inherit excluded filename extensions"
-					Checked="chkInheritExcludeByExt_CheckedChanged"
-					Unchecked="chkInheritExcludeByExt_CheckedChanged" />
-				<TextBlock TextWrapping="Wrap" Margin="3">Enter a space or comma-separated list of
-filename extensions in which to disable spell checking.  A period by itself will disable spell checking in files
-without an extension.</TextBlock>
-				<TextBox Name="txtExcludeByExtension" Height="50" TextChanged="Property_Changed" />
-			</StackPanel>
+		<GroupBox Header="_Ignored Character Class" Grid.Row="1">
+			<Grid>
+				<Grid.RowDefinitions>
+					<RowDefinition/>
+					<RowDefinition/>
+				</Grid.RowDefinitions>
+				<TextBlock TextWrapping="Wrap" Grid.Row="0" Margin="3">This option provides a simplistic way of ignoring
+non-English words containing specific classes of characters.  It works best when spell checking English text in
+files containing Cyrillic or Asian text.</TextBlock>
+				<StackPanel Grid.Row="1" Margin="30, 3, 3, 3">
+					<RadioButton Content="Inhe_rit ignored character class setting" Name="rbInheritIgnoredCharClass"
+						Checked="Property_Changed" />
+					<RadioButton Content="I_nclude all words" Name="rbIncludeAll" Checked="Property_Changed" />
+					<RadioButton Content="Ignore words containing non-_Latin characters" Name="rbIgnoreNonLatin"
+						Checked="Property_Changed" />
+					<RadioButton Content="Ignore words containing non-_ASCII characters" Name="rbIgnoreNonAscii"
+						Checked="Property_Changed" />
+				</StackPanel>
+			</Grid>
 		</GroupBox>
 	</Grid>
 </UserControl>

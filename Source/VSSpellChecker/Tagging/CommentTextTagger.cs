@@ -37,10 +37,7 @@ using Microsoft.VisualStudio.Text.Classification;
 using Microsoft.VisualStudio.Text.Tagging;
 using Microsoft.VisualStudio.Utilities;
 
-using VisualStudio.SpellChecker;
-using VisualStudio.SpellChecker.Configuration;
 using VisualStudio.SpellChecker.Tagging.CSharp;
-using VisualStudio.SpellChecker.Tagging;
 
 namespace VisualStudio.SpellChecker.Tagging
 {
@@ -52,8 +49,8 @@ namespace VisualStudio.SpellChecker.Tagging
         #region Private data members
         //=====================================================================
 
-        private ITextBuffer _buffer;
-        private IClassifier _classifier;
+        private ITextBuffer buffer;
+        private IClassifier classifier;
         private IEnumerable<string> ignoredXmlElements, spellCheckedXmlAttributes;
         #endregion
 
@@ -130,10 +127,10 @@ namespace VisualStudio.SpellChecker.Tagging
         public CommentTextTagger(ITextBuffer buffer, IClassifier classifier, IEnumerable<string> ignoredXmlElements,
           IEnumerable<string> spellCheckedXmlAttributes)
         {
-            _buffer = buffer;
-            _classifier = classifier;
+            this.buffer = buffer;
+            this.classifier = classifier;
 
-            classifier.ClassificationChanged += ClassificationChanged;
+            this.classifier.ClassificationChanged += ClassificationChanged;
 
             this.ignoredXmlElements = (ignoredXmlElements ?? Enumerable.Empty<string>());
             this.spellCheckedXmlAttributes = (spellCheckedXmlAttributes ?? Enumerable.Empty<string>());
@@ -149,16 +146,16 @@ namespace VisualStudio.SpellChecker.Tagging
             bool preprocessorKeywordSeen = false, delimiterSeen = false;
             string elementName = null, attributeName = null;
 
-            if(_classifier == null || spans == null || spans.Count == 0)
+            if(classifier == null || spans == null || spans.Count == 0)
                 yield break;
 
             ITextSnapshot snapshot = spans[0].Snapshot;
 
             foreach(var snapshotSpan in spans)
             {
-                Debug.Assert(snapshotSpan.Snapshot.TextBuffer == _buffer);
+                Debug.Assert(snapshotSpan.Snapshot.TextBuffer == buffer);
 
-                foreach(ClassificationSpan classificationSpan in _classifier.GetClassificationSpans(snapshotSpan))
+                foreach(ClassificationSpan classificationSpan in classifier.GetClassificationSpans(snapshotSpan))
                 {
                     string name = classificationSpan.ClassificationType.Classification.ToLowerInvariant();
 
@@ -256,8 +253,11 @@ namespace VisualStudio.SpellChecker.Tagging
         /// <inheritdoc />
         public void Dispose()
         {
-            if(_classifier != null)
-                _classifier.ClassificationChanged -= ClassificationChanged;
+            if(classifier != null)
+            {
+                classifier.ClassificationChanged -= ClassificationChanged;
+                classifier = null;
+            }
         }
         #endregion
     }

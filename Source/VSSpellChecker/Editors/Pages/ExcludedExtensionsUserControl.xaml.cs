@@ -1,12 +1,12 @@
 ﻿//===============================================================================================================
 // System  : Visual Studio Spell Checker Package
-// File    : IgnoredWordsUserControl.xaml.cs
+// File    : ExcludedExtensionsUserControl.xaml.cs
 // Author  : Eric Woodruff  (Eric@EWoodruff.us)
-// Updated : 02/10/2015
-// Note    : Copyright 2014-2015, Eric Woodruff, All rights reserved
+// Updated : 02/08/2015
+// Note    : Copyright 2015, Eric Woodruff, All rights reserved
 // Compiler: Microsoft Visual C#
 //
-// This file contains a user control used to edit the ignored words spell checker configuration settings
+// This file contains a user control used to edit the excluded extensions spell checker configuration settings
 //
 // This code is published under the Microsoft Public License (Ms-PL).  A copy of the license should be
 // distributed with the code and can be found at the project website: https://github.com/EWSoftware/VSSpellChecker
@@ -15,7 +15,7 @@
 //
 //    Date     Who  Comments
 // ==============================================================================================================
-// 06/09/2014  EFW  Moved the ignored words settings to a user control
+// 02/08/2015  EFW  Created the code
 //===============================================================================================================
 
 using System;
@@ -30,9 +30,9 @@ using VisualStudio.SpellChecker.Configuration;
 namespace VisualStudio.SpellChecker.Editors.Pages
 {
     /// <summary>
-    /// This user control is used to edit the ignored words spell checker configuration settings
+    /// This user control is used to edit the excluded extensions spell checker configuration settings
     /// </summary>
-    public partial class IgnoredWordsUserControl : UserControl, ISpellCheckerConfiguration
+    public partial class ExcludedExtensionsUserControl : UserControl, ISpellCheckerConfiguration
     {
         #region Constructor
         //=====================================================================
@@ -40,7 +40,7 @@ namespace VisualStudio.SpellChecker.Editors.Pages
         /// <summary>
         /// Constructor
         /// </summary>
-        public IgnoredWordsUserControl()
+        public ExcludedExtensionsUserControl()
         {
             InitializeComponent();
         }
@@ -58,7 +58,7 @@ namespace VisualStudio.SpellChecker.Editors.Pages
         /// <inheritdoc />
         public string Title
         {
-            get { return "Ignored Words"; }
+            get { return "Excluded Filename Extensions"; }
         }
 
         /// <inheritdoc />
@@ -71,30 +71,27 @@ namespace VisualStudio.SpellChecker.Editors.Pages
         public void LoadConfiguration(SpellingConfigurationFile configuration)
         {
             IEnumerable<string> words;
-            lbIgnoredWords.Items.Clear();
+            lbExcludedExtensions.Items.Clear();
 
             if(configuration.ConfigurationType == ConfigurationType.Global)
             {
-                chkInheritIgnoredWords.IsChecked = false;
-                chkInheritIgnoredWords.Visibility = Visibility.Collapsed;
+                chkInheritExcludedExtensions.IsChecked = false;
+                chkInheritExcludedExtensions.Visibility = Visibility.Collapsed;
             }
             else
-                chkInheritIgnoredWords.IsChecked = configuration.ToBoolean(PropertyNames.InheritIgnoredWords);
+                chkInheritExcludedExtensions.IsChecked = configuration.ToBoolean(PropertyNames.InheritExcludedExtensions);
 
-            if(configuration.HasProperty(PropertyNames.IgnoredWords))
-                words = configuration.ToValues(PropertyNames.IgnoredWords, PropertyNames.IgnoredWordsItem);
+            if(configuration.HasProperty(PropertyNames.ExcludedExtensions))
+                words = configuration.ToValues(PropertyNames.ExcludedExtensions, PropertyNames.ExcludedExtensionsItem);
             else
-                if(!chkInheritIgnoredWords.IsChecked.Value && configuration.ConfigurationType == ConfigurationType.Global)
-                    words = SpellCheckerConfiguration.DefaultIgnoredWords;
-                else
-                    words = Enumerable.Empty<string>();
+                words = Enumerable.Empty<string>();
 
             foreach(string el in words)
-                lbIgnoredWords.Items.Add(el);
+                lbExcludedExtensions.Items.Add(el);
 
             var sd = new SortDescription { Direction = ListSortDirection.Ascending };
 
-            lbIgnoredWords.Items.SortDescriptions.Add(sd);
+            lbExcludedExtensions.Items.SortDescriptions.Add(sd);
         }
 
         /// <inheritdoc />
@@ -102,19 +99,13 @@ namespace VisualStudio.SpellChecker.Editors.Pages
         {
             HashSet<string> newList = null;
 
-            if(lbIgnoredWords.Items.Count != 0 || !chkInheritIgnoredWords.IsChecked.Value)
-            {
-                newList = new HashSet<string>(lbIgnoredWords.Items.OfType<string>());
-
-                if(configuration.ConfigurationType == ConfigurationType.Global &&
-                  newList.SetEquals(SpellCheckerConfiguration.DefaultIgnoredWords))
-                    newList = null;
-            }
+            if(lbExcludedExtensions.Items.Count != 0)
+                newList = new HashSet<string>(lbExcludedExtensions.Items.OfType<string>());
 
             if(configuration.ConfigurationType != ConfigurationType.Global)
-                configuration.StoreProperty(PropertyNames.InheritIgnoredWords, chkInheritIgnoredWords.IsChecked);
+                configuration.StoreProperty(PropertyNames.InheritExcludedExtensions, chkInheritExcludedExtensions.IsChecked);
 
-            configuration.StoreValues(PropertyNames.IgnoredWords, PropertyNames.IgnoredWordsItem, newList);
+            configuration.StoreValues(PropertyNames.ExcludedExtensions, PropertyNames.ExcludedExtensionsItem, newList);
         }
 
         /// <inheritdoc />
@@ -126,89 +117,69 @@ namespace VisualStudio.SpellChecker.Editors.Pages
         //=====================================================================
 
         /// <summary>
-        /// Add one or more new ignored word to the list
+        /// Add one or more new excluded extensions to the list
         /// </summary>
         /// <param name="sender">The sender of the event</param>
         /// <param name="e">The event arguments</param>
-        private void btnAddIgnoredWord_Click(object sender, RoutedEventArgs e)
+        private void btnAddExcludedExt_Click(object sender, RoutedEventArgs e)
         {
-            char[] escapedLetters = new[] { 'a', 'b', 'f', 'n', 'r', 't', 'v', 'x', 'u', 'U' };
-            int idx;
+            txtExcludedExtension.Text = txtExcludedExtension.Text.Trim();
 
-            txtIgnoredWord.Text = txtIgnoredWord.Text.Trim();
-
-            if(txtIgnoredWord.Text.Length != 0)
-                foreach(string word in txtIgnoredWord.Text.Split(new[] { ' ', '\t', ',', '.' },
+            if(txtExcludedExtension.Text.Length != 0)
+                foreach(string ext in txtExcludedExtension.Text.Split(new[] { ' ', '\t', ',' },
                   StringSplitOptions.RemoveEmptyEntries))
                 {
-                    string addWord = word;
+                    string addExt;
 
-                    if(addWord.Length < 3 && addWord[0] == '\\')
-                        addWord = String.Empty;
+                    if(ext[0] != '.')
+                        addExt = "." + ext;
                     else
-                        if(addWord.Length > 1 && addWord[0] == '\\' && !escapedLetters.Contains(addWord[1]))
-                            addWord = addWord.Substring(1);
+                        addExt = ext;
 
-                    if(addWord.Length > 2)
-                    {
-                        idx = lbIgnoredWords.Items.IndexOf(addWord);
-
-                        if(idx == -1)
-                            idx = lbIgnoredWords.Items.Add(addWord);
-
-                        if(idx != -1)
-                        {
-                            lbIgnoredWords.SelectedIndex = idx;
-                            lbIgnoredWords.ScrollIntoView(lbIgnoredWords.Items[idx]);
-                        }
-                    }
+                    lbExcludedExtensions.Items.Add(addExt);
                 }
 
-            txtIgnoredWord.Text = null;
+            txtExcludedExtension.Text = null;
             Property_Changed(sender, e);
         }
 
         /// <summary>
-        /// Remove the selected word from the list of ignored words
+        /// Remove the selected extension from the list of excluded extensions
         /// </summary>
         /// <param name="sender">The sender of the event</param>
         /// <param name="e">The event arguments</param>
-        private void btnRemoveIgnoredWord_Click(object sender, RoutedEventArgs e)
+        private void btnRemoveExcludedExt_Click(object sender, RoutedEventArgs e)
         {
-            int idx = lbIgnoredWords.SelectedIndex;
+            int idx = lbExcludedExtensions.SelectedIndex;
 
             if(idx != -1)
-                lbIgnoredWords.Items.RemoveAt(idx);
+                lbExcludedExtensions.Items.RemoveAt(idx);
 
-            if(lbIgnoredWords.Items.Count != 0)
+            if(lbExcludedExtensions.Items.Count != 0)
             {
                 if(idx < 0)
                     idx = 0;
                 else
-                    if(idx >= lbIgnoredWords.Items.Count)
-                        idx = lbIgnoredWords.Items.Count - 1;
+                    if(idx >= lbExcludedExtensions.Items.Count)
+                        idx = lbExcludedExtensions.Items.Count - 1;
 
-                lbIgnoredWords.SelectedIndex = idx;
+                lbExcludedExtensions.SelectedIndex = idx;
             }
 
             Property_Changed(sender, e);
         }
 
         /// <summary>
-        /// Reset the ignored words to the default list or blank if inherited
+        /// Clear the list of excluded extensions
         /// </summary>
         /// <param name="sender">The sender of the event</param>
         /// <param name="e">The event arguments</param>
-        private void btnDefaultIgnoredWords_Click(object sender, RoutedEventArgs e)
+        private void btnClearExcludedExts_Click(object sender, RoutedEventArgs e)
         {
-            lbIgnoredWords.Items.Clear();
-
-            if(!chkInheritIgnoredWords.IsChecked.Value)
-                foreach(string el in SpellCheckerConfiguration.DefaultIgnoredWords)
-                    lbIgnoredWords.Items.Add(el);
+            lbExcludedExtensions.Items.Clear();
 
             var sd = new SortDescription { Direction = ListSortDirection.Ascending };
-            lbIgnoredWords.Items.SortDescriptions.Add(sd);
+            lbExcludedExtensions.Items.SortDescriptions.Add(sd);
 
             Property_Changed(sender, e);
         }

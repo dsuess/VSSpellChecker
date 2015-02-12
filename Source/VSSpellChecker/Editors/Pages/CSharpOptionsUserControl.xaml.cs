@@ -61,7 +61,7 @@ namespace VisualStudio.SpellChecker.Editors.Pages
         /// <inheritdoc />
         public string HelpUrl
         {
-            get { return "C#-Options"; }
+            get { return this.Title.Replace(" ", "-"); }
         }
 
         /// <inheritdoc />
